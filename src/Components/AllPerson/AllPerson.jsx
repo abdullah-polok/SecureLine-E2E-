@@ -1,4 +1,4 @@
-import React from "react";
+import React, { createContext } from "react";
 
 const AllPerson = () => {
   return (
@@ -18,3 +18,4 @@ const AllPerson = () => {
 };
 
 export default AllPerson;
+export const AuthContext = createContext(null);

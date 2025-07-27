@@ -1,7 +1,9 @@
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { auth } from "../../../../firebase.config";
 const Register = () => {
   const navigate = useNavigate();
   const [registerError, setRegisterError] = useState("");
@@ -55,7 +57,7 @@ const Register = () => {
       });
       return;
     }
-    createUser(email, password)
+    createUserWithEmailAndPassword(auth, email, password)
       .then((res) => {
         // console.log(res.user);
         const user = res.user;
@@ -63,7 +65,7 @@ const Register = () => {
         //Reset login form
         e.target.reset();
         ///Navigate to Home
-        navigate("/question-maker");
+        navigate("/");
       })
       .catch((err) => {
         console.log(err.message);

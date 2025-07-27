@@ -2,9 +2,18 @@ import React from "react";
 import { Link } from "react-router";
 import { ToastContainer } from "react-toastify";
 import logo from "../../../assets/wmremove-transformed.png";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../../../firebase.config";
 const Login = () => {
-  const handleSignIn = () => {
-    // signInWithEmailAndPassword()
+  const handleSignIn = (e) => {
+    e.preventDefault();
+    const form = e.target;
+
+    const email = form.email.value;
+    const password = form.password.value;
+
+    // console.log(email, password);
+    signInWithEmailAndPassword(auth, email, password);
   };
   return (
     <div className="">
