@@ -1,0 +1,75 @@
+import React from "react";
+import { Link } from "react-router";
+import { ToastContainer } from "react-toastify";
+import logo from "../../../assets/wmremove-transformed.png";
+const Login = () => {
+  const handleSignIn = () => {
+    // signInWithEmailAndPassword()
+  };
+  return (
+    <div className="">
+      <div className="hero-content flex-col lg:flex-row-reverse mx-auto">
+        <div className="card w-full max-w-sm shrink-0 shadow-lg bg-white rounded-lg border border-gray-200">
+          <div className="w-full flex justify-center mt-2">
+            <img
+              className="w-2/4
+            "
+              src={logo}
+              alt=""
+            />
+          </div>
+          <form
+            onSubmit={handleSignIn}
+            className="card-body dark:text-gray-600"
+          >
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-sm">Email</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                placeholder="email"
+                className="input input-bordered input-sm py-5"
+                required
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-sm">Password</span>
+              </label>
+              <input
+                type="password"
+                name="password"
+                placeholder="password"
+                className="input input-bordered input-sm py-5 "
+                required
+              />
+              <label className="label">
+                <Link
+                  to={"/resetpassword"}
+                  className="label-text-alt link link-hover  text-[#3799db] text-sm font-bold"
+                >
+                  Forgot password
+                </Link>
+              </label>
+            </div>
+            <div className="form-control mt-6 w-full text-center">
+              <button className="btn bg-[#3799db] text-white btn-sm  ">
+                Login
+              </button>
+            </div>
+            <ToastContainer></ToastContainer>
+          </form>
+          <div className="px-10 py-4">
+            <Link to={"/register"} className="text-[#3799db] font-bold">
+              Create an account?
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Login;
