@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { auth } from "../../../../firebase.config";
+import logo from "../../../assets/wmremove-transformed-removebg-preview.png";
 const Register = () => {
   const navigate = useNavigate();
   const [registerError, setRegisterError] = useState("");
@@ -78,65 +79,73 @@ const Register = () => {
     <div className="">
       <div className="hero-content flex-col lg:flex-row-reverse mx-auto">
         <div className="card  w-full max-w-sm shrink-0 shadow-lg bg-white rounded-lg border border-gray-200">
+          <div className="w-full flex justify-center mt-2">
+            <img
+              className="xl:w-2/4 lg:w-2/4 w-1/3
+                    "
+              src={logo}
+              alt=""
+            />
+          </div>
           <form onSubmit={handleRegister} className="card-body text-black">
             <div className="form-control">
-              <label className="label">
-                <span className="label-text">Full name</span>
+              <label className="label text-xs">
+                <span className="label-text text-xs">Full name</span>
               </label>
               <input
                 type="text"
                 name="name"
                 placeholder="full name"
-                className="input input-bordered input-sm py-5"
+                className="input input-bordered input-xs py-4"
                 required
               />
             </div>
             <div className="form-control">
-              <label className="label">
+              <label className="label text-xs">
                 <span className="label-text">Email</span>
               </label>
               <input
                 type="email"
                 name="email"
                 placeholder="email"
-                className="input input-bordered input-sm py-5"
+                className="input input-bordered input-xs py-4"
                 required
               />
             </div>
             <div className="form-control">
-              <label className="label">
+              <label className="label  text-xs">
                 <span className="label-text">Password</span>
               </label>
               <input
                 type="password"
                 name="password"
                 placeholder="password"
-                className="input input-bordered input-sm py-5"
+                className="input input-bordered input-sm py-4"
                 required
               />
             </div>
             <div className="form-control">
-              <label className="label">
+              <label className="label  text-xs">
                 <span className="label-text">Confirm Password</span>
               </label>
               <input
                 type="password"
                 name="confirmPassword"
                 placeholder="Confirm password"
-                className="input input-bordered input-sm py-5"
+                className="input input-bordered input-sm py-4"
                 required
               />
             </div>
 
-            <div className="form-control mt-6 text-center">
+            <div className="form-control mt-3 text-center">
               <button className="btn bg-[#3799db] text-white btn-sm">
                 Register
               </button>
               <ToastContainer></ToastContainer>
             </div>
           </form>
-          <div className="px-10 py-4">
-            <Link to={"/"} className="text-[#3799db] font-bold">
+          <div className="px-7 pb-3">
+            <Link to={"/"} className="text-[#3799db] font-bold text-xs">
               Already,have a account?
             </Link>
           </div>

@@ -5,7 +5,7 @@ import Navbar from "../Components/Header/Navbar";
 const Main = () => {
   return (
     <div className="max-w-sm mx-auto rounded-md">
-      <Navbar></Navbar>
+      {/* <Navbar></Navbar> */}
       <div className="">
         <Outlet></Outlet>
       </div>
