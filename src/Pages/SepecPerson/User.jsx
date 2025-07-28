@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router";
 import { IoChevronBackOutline } from "react-icons/io5";
+import { AuthContext } from "../../AuthProvider/AuthContext";
 
 const User = () => {
   const navigate = useNavigate();
+
+  const { binaryCheck, generataRandomInitilKey } = useContext(AuthContext);
 
   return (
     <div>
@@ -36,6 +39,14 @@ const User = () => {
             </p>
           </div>
         </div>
+      </div>
+      <div className="text-center">
+        <button onClick={binaryCheck} className="btn  bg-red-400">
+          Check
+        </button>
+        <button onClick={generataRandomInitilKey} className="btn  bg-red-400">
+          Check 64
+        </button>
       </div>
     </div>
   );
