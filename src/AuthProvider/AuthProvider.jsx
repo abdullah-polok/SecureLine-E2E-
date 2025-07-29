@@ -13,7 +13,8 @@ const AuthProvider = ({ children }) => {
 
   let charBinary = "";
   // let num = ass;
-  const binaryCheck = (char) => {
+  const generalBinaryConvertor = (char) => {
+    charBinary = "";
     for (let i = 0; i < char.length; i++) {
       let asciiValue = char.charCodeAt(i);
       while (asciiValue > 0) {
@@ -21,29 +22,42 @@ const AuthProvider = ({ children }) => {
         charBinary = charBinary + rem;
         asciiValue = Math.floor(asciiValue / 2);
       }
-      charBinary = charBinary + " ";
     }
-    console.log(charBinary);
+    console.log(charBinary.length);
+    // convert56BitBinary();
+    // console.log(charBinary);
   };
 
   ////Generate 64 bits random key for DES
 
   // A byte = 8 bits = can represent 256 different values
   // So, each byte can be any value from:
-
-  // css
-  // Copy
-  // Edit
   // 0 to 255 (inclusive)
-  let key = "";
+  let initialKey = "";
   const generataRandomInitilKey = () => {
+    initialKey = "";
     for (let i = 0; i < 8; i++) {
       const randomByte = Math.floor(Math.random() * 256);
-      console.log(randomByte);
-      key = key + String.fromCharCode(randomByte);
+      // console.log(randomByte);
+
+      // Get ASCII code and convert to 8-bit binary
+      // key = key + String.fromCharCode(randomByte);
+
+      initialKey = initialKey + randomByte.toString(2).padStart(8, "0");
     }
-    // console.log(key);
-    binaryCheck(key);
+    console.log("key length:" + initialKey.length);
+    // console.log(initialKey);
+    convert56BitBinary(initialKey);
+  };
+
+  let key56bit = "";
+  const convert56BitBinary = (localInitialKey) => {
+    key56bit = "";
+    for (let i = 0; i < localInitialKey.length; i++) {
+      if ((i + 1) % 8 != 0) key56bit = key56bit + localInitialKey[i];
+    }
+    // console.log("Key 56 bits " + key56bit.length);
+    console.log(key56bit);
   };
 
   useEffect(() => {
@@ -56,7 +70,7 @@ const AuthProvider = ({ children }) => {
       unsubscribe();
     };
   }, [user]);
-  const userInfo = { user, binaryCheck, generataRandomInitilKey };
+  const userInfo = { user, generalBinaryConvertor, generataRandomInitilKey };
   return (
     <AuthContext.Provider value={userInfo}>{children}</AuthContext.Provider>
   );
