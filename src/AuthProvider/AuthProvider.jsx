@@ -58,6 +58,25 @@ const AuthProvider = ({ children }) => {
     }
     // console.log("Key 56 bits " + key56bit.length);
     console.log(key56bit);
+    convert48bitBinary(key56bit);
+  };
+
+  ///Built in array table in DES Algorithm
+  const PC2 = [
+    14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10, 23, 19, 12, 4, 26, 8, 16, 7, 27,
+    20, 13, 2, 41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48, 44, 49, 39, 56,
+    34, 53, 46, 42, 50, 36, 29, 32,
+  ];
+
+  let key48bit = "";
+  const convert48bitBinary = (local56bitKey) => {
+    key48bit = "";
+    for (let i = 0; i < PC2.length; i++) {
+      key48bit += local56bitKey[PC2[i] - 1]; // -1 because of 0-index
+    }
+    // console.log("Key 48 bits " + key48bit.length);
+    console.log(key48bit);
+    // console.log("PC2" + PC2.length);
   };
 
   useEffect(() => {
