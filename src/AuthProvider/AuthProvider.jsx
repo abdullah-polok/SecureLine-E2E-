@@ -8,22 +8,31 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   //////DES Method manually set up
-  const char = "Helloy";
+  let char = "Hello";
   // const ass = char.charCodeAt(0);
 
   let charBinary = "";
   // let num = ass;
-  const generalBinaryConvertor = (char) => {
+  const generalBinaryConvertor = () => {
     charBinary = "";
+
+    while (char.length < 8) {
+      char += "\0"; // Null character padding (can be changed to space or any char)
+    }
+
     for (let i = 0; i < char.length; i++) {
       let asciiValue = char.charCodeAt(i);
+      let bin = "";
       while (asciiValue > 0) {
-        const rem = asciiValue % 2;
-        charBinary = charBinary + rem;
+        ///get reminder of set into the bin as string
+        bin = bin + (asciiValue % 2);
         asciiValue = Math.floor(asciiValue / 2);
       }
+
+      bin = bin.padStart(8, "0"); ///Add o infront to make 8-bits
+      charBinary = charBinary + bin;
     }
-    console.log(charBinary.length);
+    console.log(charBinary);
     // convert56BitBinary();
     // console.log(charBinary);
   };
@@ -45,7 +54,7 @@ const AuthProvider = ({ children }) => {
 
       initialKey = initialKey + randomByte.toString(2).padStart(8, "0");
     }
-    console.log("key length:" + initialKey.length);
+    // console.log("key length:" + initialKey.length);
     // console.log(initialKey);
     convert56BitBinary(initialKey);
   };
@@ -57,7 +66,7 @@ const AuthProvider = ({ children }) => {
       if ((i + 1) % 8 != 0) key56bit = key56bit + localInitialKey[i];
     }
     // console.log("Key 56 bits " + key56bit.length);
-    console.log(key56bit);
+    // console.log(key56bit);
     convert48bitBinary(key56bit);
   };
 
@@ -75,7 +84,7 @@ const AuthProvider = ({ children }) => {
       key48bit += local56bitKey[PC2[i] - 1]; // -1 because of 0-index
     }
     // console.log("Key 48 bits " + key48bit.length);
-    console.log(key48bit);
+    console.log(key48bit.length);
     // console.log("PC2" + PC2.length);
   };
 
