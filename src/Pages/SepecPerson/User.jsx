@@ -6,7 +6,7 @@ import { AuthContext } from "../../AuthProvider/AuthContext";
 const User = () => {
   const navigate = useNavigate();
 
-  const { generalBinaryConvertor, generataRandomInitilKey } =
+  const { generalBinaryConvertor, binaryToText, generataRandomInitilKey } =
     useContext(AuthContext);
 
   return (
@@ -44,6 +44,9 @@ const User = () => {
       <div className="text-center">
         <button onClick={generalBinaryConvertor} className="btn  bg-red-400">
           Check
+        </button>
+        <button onClick={binaryToText} className="btn  bg-red-400">
+          Check message
         </button>
         <button onClick={generataRandomInitilKey} className="btn  bg-red-400">
           Check 64

@@ -8,33 +8,58 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   //////DES Method manually set up
-  let char = "Hello";
+  let char = "Hello world good boy i am abdullah who are you ";
   // const ass = char.charCodeAt(0);
-
-  let charBinary = "";
   // let num = ass;
+  let left32bits = "";
+  let right32bits = "";
+  const blocks = [];
   const generalBinaryConvertor = () => {
-    charBinary = "";
+    for (let i = 0; i < char.length; i += 8) {
+      let block = char.slice(i, i + 8);
 
-    while (char.length < 8) {
-      char += "\0"; // Null character padding (can be changed to space or any char)
-    }
-
-    for (let i = 0; i < char.length; i++) {
-      let asciiValue = char.charCodeAt(i);
-      let bin = "";
-      while (asciiValue > 0) {
-        ///get reminder of set into the bin as string
-        bin = bin + (asciiValue % 2);
-        asciiValue = Math.floor(asciiValue / 2);
+      while (block.length < 8) {
+        block += "\0"; // Null character padding (can be changed to space or any char)
       }
 
-      bin = bin.padStart(8, "0"); ///Add o infront to make 8-bits
-      charBinary = charBinary + bin;
+      let charBinary = "";
+
+      // console.log(char);
+      for (let i = 0; i < block.length; i++) {
+        let asciiValue = block.charCodeAt(i);
+        let bin = "";
+        while (asciiValue > 0) {
+          ///get reminder of set into the bin as string
+          // bin = bin + (asciiValue % 2);//// Backward binary addition
+          bin = (asciiValue % 2) + bin; ///forward bit addition
+          asciiValue = Math.floor(asciiValue / 2);
+        }
+
+        bin = bin.padStart(8, "0"); ///Add o infront to make 8-bits
+        charBinary = charBinary + bin;
+      }
+      blocks.push(charBinary);
     }
-    console.log(charBinary);
+    // console.log(charBinary);
+    // console.log(blocks);
     // convert56BitBinary();
     // console.log(charBinary);
+  };
+
+  ///Reverse Function Code:
+  const binaryToText = () => {
+    let message = "";
+
+    for (let block of blocks) {
+      for (let i = 0; i < block.length; i += 8) {
+        const byte = block.slice(i, i + 8); // get 8 bits
+        const ascii = parseInt(byte, 2); // convert binary to decimal
+        const char = String.fromCharCode(ascii); // convert to character
+
+        message += char;
+      }
+    }
+    console.log(message);
   };
 
   ////Generate 64 bits random key for DES
@@ -98,7 +123,12 @@ const AuthProvider = ({ children }) => {
       unsubscribe();
     };
   }, [user]);
-  const userInfo = { user, generalBinaryConvertor, generataRandomInitilKey };
+  const userInfo = {
+    user,
+    generalBinaryConvertor,
+    binaryToText,
+    generataRandomInitilKey,
+  };
   return (
     <AuthContext.Provider value={userInfo}>{children}</AuthContext.Provider>
   );
