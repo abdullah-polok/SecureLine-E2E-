@@ -6,16 +6,16 @@ const Users = () => {
   const { allusers } = useContext(AuthContext);
   console.log(allusers);
   return (
-    <div>
+    <div className="flex gap-x-4">
       {allusers.map((person) => (
         <Link key={person.id} to={`/users/${person.id}`}>
           <div className="w-16">
             <div className="avatar avatar-online">
-              <div className="w-20 rounded-full">
+              <div className="w-14 rounded-full">
                 <img src="https://img.daisyui.com/images/profile/demo/gordon@192.webp" />
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-center text-xs">
               <h1>{person.displayName}</h1>
             </div>
           </div>

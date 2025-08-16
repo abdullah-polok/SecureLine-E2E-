@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { AuthContext } from "../../AuthProvider/AuthContext";
 import { IoSend } from "react-icons/io5";
@@ -7,14 +7,22 @@ const User = () => {
   const navigate = useNavigate();
   const [value, setValue] = useState("");
 
-  const { generalBinaryConvertor, binaryToText, generataRandomInitilKey } =
-    useContext(AuthContext);
+  const {
+    user,
+    generalBinaryConvertor,
+    binaryToText,
+    generataRandomInitilKey,
+  } = useContext(AuthContext);
+
+  const { id } = useParams(); // <-- get dynamic portion of a link
+  console.log("Dynamic portion:", id, " User", user.uid);
 
   const getInputText = (event) => {
     setValue(event.target.value);
+  };
+  const sendText = () => {
     console.log(value);
   };
-
   return (
     <div>
       <div className="flex items-center bg-gray-300 p-2">
@@ -57,7 +65,9 @@ const User = () => {
             />
           </div>
           <div className="text-xl">
-            <IoSend />
+            <button onClick={sendText}>
+              <IoSend />
+            </button>
           </div>
         </div>
       </div>
