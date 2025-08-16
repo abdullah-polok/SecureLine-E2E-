@@ -1,12 +1,30 @@
 import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
-import { auth } from "../../firebase.config";
+import { auth, db } from "../../firebase.config";
 import { AuthContext } from "./AuthContext";
+import { collection, getDoc, getDocs } from "firebase/firestore";
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [allusers, setAllUsers] = useState([]);
+
+  ////Get all users
+  const getAllUsers = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "Users"));
+      const userArray = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setAllUsers(userArray);
+
+      console.lgo(userArray);
+    } catch (err) {
+      console.log(err);
+    }
+  };
   //////DES Method manually set up
   let char = "Hello world good boy i am abdullah who are you ";
   // const ass = char.charCodeAt(0);
@@ -17,7 +35,7 @@ const AuthProvider = ({ children }) => {
   const generalBinaryConvertor = () => {
     for (let i = 0; i < char.length; i += 8) {
       let block = char.slice(i, i + 8);
-
+      console.log(block);
       while (block.length < 8) {
         block += "\0"; // Null character padding (can be changed to space or any char)
       }
@@ -39,9 +57,10 @@ const AuthProvider = ({ children }) => {
         charBinary = charBinary + bin;
       }
       blocks.push(charBinary);
+      console.log(charBinary);
     }
-    // console.log(charBinary);
-    // console.log(blocks);
+
+    // console.log(blocks[1].length);
     // convert56BitBinary();
     // console.log(charBinary);
   };
@@ -53,6 +72,7 @@ const AuthProvider = ({ children }) => {
     for (let block of blocks) {
       for (let i = 0; i < block.length; i += 8) {
         const byte = block.slice(i, i + 8); // get 8 bits
+
         const ascii = parseInt(byte, 2); // convert binary to decimal
         const char = String.fromCharCode(ascii); // convert to character
 
@@ -118,11 +138,14 @@ const AuthProvider = ({ children }) => {
       setUser(currentUser);
 
       setLoading(false);
+      getAllUsers();
     });
     return () => {
       unsubscribe();
     };
   }, [user]);
+
+  console.log(allusers);
   const userInfo = {
     user,
     generalBinaryConvertor,

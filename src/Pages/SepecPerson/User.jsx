@@ -1,13 +1,19 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { AuthContext } from "../../AuthProvider/AuthContext";
-
+import { IoSend } from "react-icons/io5";
 const User = () => {
   const navigate = useNavigate();
+  const [value, setValue] = useState("");
 
   const { generalBinaryConvertor, binaryToText, generataRandomInitilKey } =
     useContext(AuthContext);
+
+  const getInputText = (event) => {
+    setValue(event.target.value);
+    console.log(value);
+  };
 
   return (
     <div>
@@ -24,13 +30,13 @@ const User = () => {
       </div>
 
       <div className="bg-green-300 min-h-svh flex-1 overflow-y-auto p-3 space-y-3">
-        <div className="flex p-3">
+        <div className="flex ">
           <div>
             <p className="bg-[#eeefee]  p-3 rounded-lg">Its great</p>
           </div>
         </div>
 
-        <div className="flex justify-end p-3">
+        <div className="flex justify-end ">
           <div>
             <p className="bg-[#0385ff] p-3 rounded-lg text-white">
               Good to know Lorem ipsum dolor sit amet consectetur adipisicing
@@ -40,7 +46,22 @@ const User = () => {
             </p>
           </div>
         </div>
+        <div className="flex items-center">
+          <div className="w-full">
+            <input
+              onChange={getInputText}
+              type="text"
+              value={value}
+              placeholder="message"
+              className="input input-accent"
+            />
+          </div>
+          <div className="text-xl">
+            <IoSend />
+          </div>
+        </div>
       </div>
+
       <div className="text-center">
         <button onClick={generalBinaryConvertor} className="btn  bg-red-400">
           Check

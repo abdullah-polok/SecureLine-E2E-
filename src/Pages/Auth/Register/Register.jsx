@@ -1,10 +1,11 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { auth } from "../../../../firebase.config";
+import { auth, db } from "../../../../firebase.config";
 import logo from "../../../assets/wmremove-transformed-removebg-preview.png";
+import { doc, setDoc } from "firebase/firestore";
 const Register = () => {
   const navigate = useNavigate();
   const [registerError, setRegisterError] = useState("");
@@ -58,21 +59,33 @@ const Register = () => {
       });
       return;
     }
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((res) => {
-        // console.log(res.user);
-        const user = res.user;
-        toast("User created successfully");
-        //Reset login form
-        e.target.reset();
-        ///Navigate to Home
-        navigate("/");
-      })
-      .catch((err) => {
-        console.log(err.message);
-        setRegisterError(err.message);
-        toast(err.message);
+    try {
+      const res = await createUserWithEmailAndPassword(auth, email, password);
+      const user = res.user;
+
+      //Set displayName
+      await updateProfile(user, {
+        displayName: name,
       });
+
+      // Save user info in Firestore
+      await setDoc(doc(db, "Users", user.uid), {
+        uid: user.uid,
+        displayName: name,
+        email: user.email,
+        createdAt: new Date(),
+      });
+
+      toast("User created successfully");
+
+      // 3. Reset form + navigate
+      e.target.reset();
+      navigate("/");
+    } catch (err) {
+      console.log(err.message);
+      setRegisterError(err.message);
+      toast(err.message);
+    }
   };
 
   return (

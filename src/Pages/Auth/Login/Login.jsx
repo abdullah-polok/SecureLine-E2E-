@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ToastContainer } from "react-toastify";
 import logo from "../../../assets/wmremove-transformed.png";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../../../firebase.config";
+import { AuthContext } from "../../../AuthProvider/AuthContext";
 const Login = () => {
+  const [showPopup, setShowPopup] = useState(false);
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const handleSignIn = (e) => {
     e.preventDefault();
@@ -12,8 +15,10 @@ const Login = () => {
 
     const email = form.email.value;
     const password = form.password.value;
-
-    navigate("/home");
+    if (user) navigate("/home");
+    else {
+      setShowPopup(true);
+    }
     // console.log(email, password);
     // signInWithEmailAndPassword(auth, email, password);
   };
@@ -71,7 +76,15 @@ const Login = () => {
               </button>
             </div>
             <ToastContainer></ToastContainer>
+            {showPopup && (
+              <div className=" text-center">
+                <p className="text-red-600 text-xs">
+                  Login failed. User not found.
+                </p>
+              </div>
+            )}
           </form>
+
           <div className="px-7 pb-3">
             <Link to={"/register"} className="text-[#3799db] text-xs font-bold">
               Create an account?
