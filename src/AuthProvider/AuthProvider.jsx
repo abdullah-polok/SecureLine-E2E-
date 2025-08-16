@@ -25,6 +25,9 @@ const AuthProvider = ({ children }) => {
       console.log(err);
     }
   };
+
+  ////////////////////////////////////////////////////////////
+
   //////DES Method manually set up
   let char = "Hello world good boy i am abdullah who are you ";
   // const ass = char.charCodeAt(0);

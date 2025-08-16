@@ -3,10 +3,22 @@ import { useNavigate, useParams } from "react-router";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { AuthContext } from "../../AuthProvider/AuthContext";
 import { IoSend } from "react-icons/io5";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+  where,
+} from "firebase/firestore";
+import { db } from "../../../firebase.config";
 const User = () => {
   const navigate = useNavigate();
-  const [value, setValue] = useState("");
-
+  const [message, setMessage] = useState("");
+  const [messagesList, setMessagesList] = useState([]);
+  const [chatId, setChatId] = useState(null);
   const {
     user,
     generalBinaryConvertor,
@@ -18,10 +30,47 @@ const User = () => {
   console.log("Dynamic portion:", id, " User", user.uid);
 
   const getInputText = (event) => {
-    setValue(event.target.value);
+    setMessage(event.target.value);
   };
-  const sendText = () => {
-    console.log(value);
+
+  const createFirstChat = async () => {
+    // generate a chat document id
+    const chatRef = doc(collection(db, "Chats"));
+   ///check if chats already exist between two users
+   const find=query(chatRef,where("participants","array-contains",user.uid));
+   const snapShot=await getDocs(find);
+
+   ///find the chat that contains the other user
+   let chatDoc=snapShot.docs.find(doc=>doc.data().participants.includes(id));
+if(chatDoc)
+{
+  setChatId(chatDoc.id);
+}
+ else{
+  // create new chat
+  const newChatRef=doc(chatRef); 
+  await setDoc(newChatRef, {
+      participants: [user.uid,id],
+      lastMessage: { text: message || "", timeStamp: serverTimestamp() },
+    });
+setChatId(newChatRef.id);
+ } 
+ if(message)
+  {
+ // add the first message to the messages subcollection
+    await addDoc(collection(chatRef, "messages"), {
+      sender: user.uid,
+      text: message,
+      timestamp: serverTimestamp(),
+    });
+  } 
+   
+  };
+
+  ///send a message
+  const sendText = async () => {
+if()
+
   };
   return (
     <div>
@@ -59,13 +108,13 @@ const User = () => {
             <input
               onChange={getInputText}
               type="text"
-              value={value}
+              value={message}
               placeholder="message"
               className="input input-accent"
             />
           </div>
           <div className="text-xl">
-            <button onClick={sendText}>
+            <button onClick={createFirstChat}>
               <IoSend />
             </button>
           </div>
