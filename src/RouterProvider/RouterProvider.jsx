@@ -24,7 +24,7 @@ const routers = createBrowserRouter([
         element: <Home></Home>,
       },
       {
-        path: "/users/user",
+        path: "/users/:id", // use :id as a route parameter
         element: <User></User>,
       },
     ],

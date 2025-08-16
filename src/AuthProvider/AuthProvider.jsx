@@ -148,6 +148,7 @@ const AuthProvider = ({ children }) => {
   console.log(allusers);
   const userInfo = {
     user,
+    allusers,
     generalBinaryConvertor,
     binaryToText,
     generataRandomInitilKey,
