@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { AuthContext } from "../../AuthProvider/AuthContext";
@@ -7,8 +7,8 @@ import {
   addDoc,
   collection,
   doc,
-  getDoc,
   getDocs,
+  query,
   serverTimestamp,
   setDoc,
   where,
@@ -16,19 +16,17 @@ import {
 import { db } from "../../../firebase.config";
 const User = () => {
   const navigate = useNavigate();
-  const [message, setMessage] = useState("");
   const [messagesList, setMessagesList] = useState([]);
   const [chatId, setChatId] = useState(null);
   const {
     user,
+    message,
+    setMessage,
     generalBinaryConvertor,
     binaryToText,
     generataRandomInitilKey,
   } = useContext(AuthContext);
-
   const { id } = useParams(); // <-- get dynamic portion of a link
-  console.log("Dynamic portion:", id, " User", user.uid);
-
   const getInputText = (event) => {
     setMessage(event.target.value);
   };
@@ -36,42 +34,65 @@ const User = () => {
   const createFirstChat = async () => {
     // generate a chat document id
     const chatRef = doc(collection(db, "Chats"));
-   ///check if chats already exist between two users
-   const find=query(chatRef,where("participants","array-contains",user.uid));
-   const snapShot=await getDocs(find);
+    ///check if chats already exist between two users
+    const find = query(
+      chatRef,
+      where("participants", "array-contains", user?.uid)
+    );
+    const snapShot = await getDocs(find);
 
-   ///find the chat that contains the other user
-   let chatDoc=snapShot.docs.find(doc=>doc.data().participants.includes(id));
-if(chatDoc)
-{
-  setChatId(chatDoc.id);
-}
- else{
-  // create new chat
-  const newChatRef=doc(chatRef); 
-  await setDoc(newChatRef, {
-      participants: [user.uid,id],
-      lastMessage: { text: message || "", timeStamp: serverTimestamp() },
-    });
-setChatId(newChatRef.id);
- } 
- if(message)
-  {
- // add the first message to the messages subcollection
-    await addDoc(collection(chatRef, "messages"), {
-      sender: user.uid,
-      text: message,
-      timestamp: serverTimestamp(),
-    });
-  } 
-   
+    ///find the chat that contains the other user
+    let chatDoc = snapShot.docs.find((doc) =>
+      doc.data().participants.includes(id)
+    );
+    if (chatDoc) {
+      setChatId(chatDoc.id);
+    } else {
+      // create new chat
+      const newChatRef = doc(chatRef);
+      await setDoc(newChatRef, {
+        participants: [user?.uid, id],
+        lastMessage: { text: message || "", timeStamp: serverTimestamp() },
+      });
+      setChatId(newChatRef.id);
+    }
+    if (message) {
+      // add the first message to the messages subcollection
+      await addDoc(collection(chatRef, "messages"), {
+        sender: user?.uid,
+        text: message,
+        timestamp: serverTimestamp(),
+      });
+    }
   };
 
   ///send a message
   const sendText = async () => {
-if()
+    if (!message.trim() || !chatId) return;
+    const encryptedMessage = generalBinaryConvertor();
+    await addDoc(collection(db, "Chats", chatId, "messages"), {
+      sender: user.uid,
+      text: encryptedMessage,
+      timestamp: serverTimestamp(),
+    });
 
+    // Update last message in chat doc
+    await setDoc(
+      doc(db, "Chats", chatId),
+      {
+        lastMessage: { text: encryptedMessage, timestamp: serverTimestamp() },
+      },
+      { merge: true }
+    );
   };
+  // Load chat and messages on component mount
+  useEffect(() => {
+    createFirstChat();
+  }, []);
+
+  // useEffect(() => {
+  //   loadMessages();
+  // }, [chatId]);
   return (
     <div>
       <div className="flex items-center bg-gray-300 p-2">
@@ -114,7 +135,7 @@ if()
             />
           </div>
           <div className="text-xl">
-            <button onClick={createFirstChat}>
+            <button onClick={sendText}>
               <IoSend />
             </button>
           </div>

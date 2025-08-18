@@ -7,7 +7,7 @@ import { collection, getDoc, getDocs } from "firebase/firestore";
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  const [message, setMessage] = useState("");
   const [allusers, setAllUsers] = useState([]);
 
   ////Get all users
@@ -19,8 +19,6 @@ const AuthProvider = ({ children }) => {
         ...doc.data(),
       }));
       setAllUsers(userArray);
-
-      console.lgo(userArray);
     } catch (err) {
       console.log(err);
     }
@@ -34,16 +32,17 @@ const AuthProvider = ({ children }) => {
   // let num = ass;
   let left32bits = "";
   let right32bits = "";
+  let messageBinary;
   const blocks = [];
   const generalBinaryConvertor = () => {
-    for (let i = 0; i < char.length; i += 8) {
-      let block = char.slice(i, i + 8);
-      console.log(block);
+    console.log("Message is coming", message);
+    for (let i = 0; i < message.length; i += 8) {
+      let block = message.slice(i, i + 8);
       while (block.length < 8) {
         block += "\0"; // Null character padding (can be changed to space or any char)
       }
 
-      let charBinary = "";
+      messageBinary = "";
 
       // console.log(char);
       for (let i = 0; i < block.length; i++) {
@@ -57,10 +56,12 @@ const AuthProvider = ({ children }) => {
         }
 
         bin = bin.padStart(8, "0"); ///Add o infront to make 8-bits
-        charBinary = charBinary + bin;
+        messageBinary = messageBinary + bin;
       }
-      blocks.push(charBinary);
-      console.log(charBinary);
+      blocks.push(messageBinary);
+      // console.log(messageBinary.length);
+      sliceCharecter();
+      return messageBinary;
     }
 
     // console.log(blocks[1].length);
@@ -107,6 +108,32 @@ const AuthProvider = ({ children }) => {
     convert56BitBinary(initialKey);
   };
 
+  const sliceCharecter = () => {
+    if (messageBinary.length != 64) return;
+    left32bits = messageBinary.slice(0, 32);
+    right32bits = messageBinary.slice(32);
+
+    // console.log("left", left32bits.length);
+    // console.log("Right", right32bits.length);
+    expensionBox48bits();
+  };
+
+  let right48bits = "";
+  const expensionBox48bits = () => {
+    // Expansion table (DES E-box)
+    const E = [
+      32, 1, 2, 3, 4, 5, 4, 5, 6, 7, 8, 9, 8, 9, 10, 11, 12, 13, 12, 13, 14, 15,
+      16, 17, 16, 17, 18, 19, 20, 21, 20, 21, 22, 23, 24, 25, 24, 25, 26, 27,
+      28, 29, 28, 29, 30, 31, 32, 1,
+    ];
+
+    for (let i = 0; i < E.length; i++) {
+      right48bits += right32bits[E[i] - 1]; // -1 since JS is 0-indexed
+    }
+
+    console.log(right48bits.length);
+  };
+
   let key56bit = "";
   const convert56BitBinary = (localInitialKey) => {
     key56bit = "";
@@ -132,7 +159,7 @@ const AuthProvider = ({ children }) => {
       key48bit += local56bitKey[PC2[i] - 1]; // -1 because of 0-index
     }
     // console.log("Key 48 bits " + key48bit.length);
-    console.log(key48bit.length);
+    console.log(key48bit);
     // console.log("PC2" + PC2.length);
   };
 
@@ -148,10 +175,11 @@ const AuthProvider = ({ children }) => {
     };
   }, [user]);
 
-  console.log(allusers);
   const userInfo = {
     user,
     allusers,
+    message,
+    setMessage,
     generalBinaryConvertor,
     binaryToText,
     generataRandomInitilKey,
