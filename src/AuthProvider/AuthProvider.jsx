@@ -63,6 +63,7 @@ const AuthProvider = ({ children }) => {
       sliceCharacter();
       generataRandomInitilKey();
       xorOperation();
+      sboxcompression();
     }
 
     // console.log(blocks[1].length);
@@ -232,6 +233,21 @@ const AuthProvider = ({ children }) => {
         [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11],
       ],
     ];
+
+    let copyXorString = xorString;
+
+    for (let i = 0; i < 48; i += 6) {
+      ///take 6bits chunk from 48 bits string;
+      let chunk6bits = copyXorString.slice(i, i + 6);
+
+      ///First bit and last bit for row directly convert binary string into decimal number for  column;
+      let sliceForRow = parseInt(chunk6bits[0] + chunk6bits[5], 2);
+
+      ////Middle bits 1 to 5 means 4 bits directly convert binary string into decimal number for column
+      let sliceForColumn = parseInt(copyXorString.slice(1, 5), 2);
+
+      console.log(S_BOXES[sliceForRow][sliceForColumn]);
+    }
   };
 
   ////////XOR operation between key and plain text binary
@@ -245,7 +261,7 @@ const AuthProvider = ({ children }) => {
       if (key48bit[i] === right48bits[i]) xorString += "0";
       else xorString += "1";
     }
-    console.log("XOR String", xorString.length);
+    // console.log("XOR String", xorString.length);
   };
 
   useEffect(() => {
