@@ -150,7 +150,7 @@ const User = () => {
           Check message
         </button>
         <button onClick={generataRandomInitilKey} className="btn  bg-red-400">
-          Check 64
+          Check 64 initialKey
         </button>
       </div>
     </div>
