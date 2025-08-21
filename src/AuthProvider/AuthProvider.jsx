@@ -167,6 +167,7 @@ const AuthProvider = ({ children }) => {
   };
 
   ///S Box for 48 bits to 32convert
+  let sbox32bitString = "";
   const sboxcompression = () => {
     const S_BOXES = [
       // S1
@@ -235,7 +236,7 @@ const AuthProvider = ({ children }) => {
     ];
 
     let copyXorString = xorString;
-
+    sbox32bitString = "";
     for (let i = 0; i < 48; i += 6) {
       ///take 6bits chunk from 48 bits string;
       let chunk6bits = copyXorString.slice(i, i + 6);
@@ -246,8 +247,15 @@ const AuthProvider = ({ children }) => {
       ////Middle bits 1 to 5 means 4 bits directly convert binary string into decimal number for column
       let sliceForColumn = parseInt(copyXorString.slice(1, 5), 2);
 
-      console.log(S_BOXES[sliceForRow][sliceForColumn]);
+      let valuerOfSBox = S_BOXES[i / 6][sliceForRow][sliceForColumn];
+
+      let outputOf32Bits = valuerOfSBox.toString(2).padStart(4, "0");
+
+      sbox32bitString += outputOf32Bits;
     }
+
+    // console.log(sbox32bitString.length);
+    permutationBoxAfterSbox();
   };
 
   ////////XOR operation between key and plain text binary
@@ -262,6 +270,22 @@ const AuthProvider = ({ children }) => {
       else xorString += "1";
     }
     // console.log("XOR String", xorString.length);
+  };
+
+  ///Permutaion box after s box 32bits done
+
+  const permutationBoxAfterSbox = () => {
+    const P_BOX = [
+      16, 7, 20, 21, 29, 12, 28, 17, 1, 15, 23, 26, 5, 18, 31, 10, 2, 8, 24, 14,
+      32, 27, 3, 9, 19, 13, 30, 6, 22, 11, 4, 25,
+    ];
+    let output32 = [];
+    for (let i = 0; i < P_BOX.length; i++) {
+      // P_BOX[i] tells us which bit from input goes here
+      output32[i] = sbox32bitString[P_BOX[i] - 1];
+      // -1 because arrays in JS are 0-based but DES table is 1-based
+    }
+    console.log(output32);
   };
 
   useEffect(() => {
