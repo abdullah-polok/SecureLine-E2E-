@@ -273,19 +273,32 @@ const AuthProvider = ({ children }) => {
   };
 
   ///Permutaion box after s box 32bits done
-
+  let output32bits = "";
   const permutationBoxAfterSbox = () => {
     const P_BOX = [
       16, 7, 20, 21, 29, 12, 28, 17, 1, 15, 23, 26, 5, 18, 31, 10, 2, 8, 24, 14,
       32, 27, 3, 9, 19, 13, 30, 6, 22, 11, 4, 25,
     ];
-    let output32 = [];
+    output32bits = "";
     for (let i = 0; i < P_BOX.length; i++) {
       // P_BOX[i] tells us which bit from input goes here
-      output32[i] = sbox32bitString[P_BOX[i] - 1];
+      output32bits += sbox32bitString[P_BOX[i] - 1];
       // -1 because arrays in JS are 0-based but DES table is 1-based
     }
-    console.log(output32);
+    feistalRound();
+  };
+
+  let roundXorString = "";
+  let feistalRound = () => {
+    roundXorString = "";
+    for (let i = 0; i < 32; i++) {
+      if (left32bits[i] === output32bits[i]) roundXorString += "0";
+      else roundXorString += "1";
+    }
+
+    console.log(roundXorString);
+    // console.log("Left 32 bits", left32bits);
+    // console.log("Right output 32 bits", output32bits);
   };
 
   useEffect(() => {
