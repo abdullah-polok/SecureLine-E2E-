@@ -30,8 +30,7 @@ const AuthProvider = ({ children }) => {
   let char = "Hello world good boy i am abdullah who are you ";
   // const ass = char.charCodeAt(0);
   // let num = ass;
-  let left32bits = "";
-  let right32bits = "";
+
   let messageBinary;
   const blocks = [];
   const generalBinaryConvertor = () => {
@@ -60,15 +59,30 @@ const AuthProvider = ({ children }) => {
       }
       blocks.push(messageBinary);
       // console.log(messageBinary.length);
-      sliceCharacter();
-      generataRandomInitilKey();
-      xorOperation();
-      sboxcompression();
     }
-
+    sliceCharacter();
+    generataRandomInitilKey();
+    xorOperation();
+    sboxcompression();
     // console.log(blocks[1].length);
-    // convert56BitBinary();
+    // convert56BitBinaryKey();
     // console.log(charBinary);
+  };
+
+  let left32bitsPrimary = "";
+  let right32bitsPrimary = "";
+
+  let right32bitsCommon = "";
+  let left32bitsCommon = "";
+  ///Left and Right slice two part 64 bits string
+  const sliceCharacter = () => {
+    if (messageBinary.length != 64) return;
+    left32bitsPrimary = messageBinary.slice(0, 32);
+    right32bitsPrimary = messageBinary.slice(32);
+
+    // console.log("left", left32bitsPrimary.length);
+    // console.log("Right", right32bitsPrimary.length);
+    expansionBox48bits();
   };
 
   ///Reverse Function Code:
@@ -88,14 +102,15 @@ const AuthProvider = ({ children }) => {
     console.log(message);
   };
 
-  ////Generate 64 bits random key for DES
+  /////////////Key areas //////////////////////
 
+  ////Generate 64 bits random key for DES
   // A byte = 8 bits = can represent 256 different values
   // So, each byte can be any value from:
   // 0 to 255 (inclusive)
-  let initialKey = "";
+  let initialKey64bit = "";
   const generataRandomInitilKey = () => {
-    initialKey = "";
+    initialKey64bit = "";
     for (let i = 0; i < 8; i++) {
       const randomByte = Math.floor(Math.random() * 256);
       // console.log(randomByte);
@@ -103,24 +118,36 @@ const AuthProvider = ({ children }) => {
       // Get ASCII code and convert to 8-bit binary
       // key = key + String.fromCharCode(randomByte);
 
-      initialKey = initialKey + randomByte.toString(2).padStart(8, "0");
+      initialKey64bit =
+        initialKey64bit + randomByte.toString(2).padStart(8, "0");
     }
-    // console.log("key length:" + initialKey.length);
-    // console.log(initialKey);
-    convert56BitBinary(initialKey);
-  };
-  let key56bit = "";
-  const convert56BitBinary = (localInitialKey) => {
-    key56bit = "";
-    for (let i = 0; i < localInitialKey.length; i++) {
-      if ((i + 1) % 8 != 0) key56bit = key56bit + localInitialKey[i];
-    }
-    // console.log("Key 56 bits " + key56bit.length);
-    // console.log(key56bit);
-    convert48bitBinary(key56bit);
+    // console.log("key length:" + initialKey64bit.length);
+    // console.log(initialKey64bit);
+    convert56BitBinaryKey(initialKey64bit);
   };
 
-  ///Built in array table in DES Algorithm
+  ///Built in array table in DES Algorithm PC-1 table
+  const PC1 = [
+    57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18, 10, 2, 59, 51, 43, 35,
+    27, 19, 11, 3, 60, 52, 44, 36, 63, 55, 47, 39, 31, 23, 15, 7, 62, 54, 46,
+    38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 28, 20, 12, 4,
+  ];
+  let key56bit = "";
+  const convert56BitBinaryKey = (localinitialKey64bit) => {
+    const SHIFTS = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
+
+    key56bit = "";
+    // Apply PC-1 permutation
+    for (let i = 0; i < PC1.length; i++) {
+      key56bit += localinitialKey64bit[PC1[i] - 1]; // -1 because array is 0-indexed
+    }
+
+    // console.log("Key 56 bits " + key56bit.length);
+    // console.log(key56bit);
+    convert48BitBinaryKey(key56bit);
+  };
+
+  ///Built in array table in DES Algorithm PC-2 table
   const PC2 = [
     14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10, 23, 19, 12, 4, 26, 8, 16, 7, 27,
     20, 13, 2, 41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48, 44, 49, 39, 56,
@@ -128,7 +155,7 @@ const AuthProvider = ({ children }) => {
   ];
 
   let key48bit = "";
-  const convert48bitBinary = (local56bitKey) => {
+  const convert48BitBinaryKey = (local56bitKey) => {
     key48bit = "";
     for (let i = 0; i < PC2.length; i++) {
       key48bit += local56bitKey[PC2[i] - 1]; // -1 because of 0-index
@@ -138,16 +165,9 @@ const AuthProvider = ({ children }) => {
     // console.log("PC2" + PC2.length);
   };
 
-  ///Left and Right slice two part 64 bits string
-  const sliceCharacter = () => {
-    if (messageBinary.length != 64) return;
-    left32bits = messageBinary.slice(0, 32);
-    right32bits = messageBinary.slice(32);
+  /////////////Key areas //////////////////////
 
-    // console.log("left", left32bits.length);
-    // console.log("Right", right32bits.length);
-    expansionBox48bits();
-  };
+  ///////////////Function Defination inside DES//////////////////////////////
 
   let right48bits = "";
   const expansionBox48bits = () => {
@@ -159,11 +179,24 @@ const AuthProvider = ({ children }) => {
     ];
 
     for (let i = 0; i < E.length; i++) {
-      right48bits += right32bits[E[i] - 1]; // -1 since JS is 0-indexed
+      right48bits += right32bitsPrimary[E[i] - 1]; // -1 since JS is 0-indexed
     }
 
     // console.log(right48bits.length);
-    xorOperation();
+  };
+
+  ////////XOR operation between key and plain text binary 48 bits key and plain text
+
+  let xorString = "";
+  const xorOperation = () => {
+    xorString = "";
+    // console.log("key", key48bit.length);
+    // console.log("text", right48bits.length);
+    for (let i = 0; i < 48; i++) {
+      if (key48bit[i] === right48bits[i]) xorString += "0";
+      else xorString += "1";
+    }
+    // console.log("XOR String", xorString.length);
   };
 
   ///S Box for 48 bits to 32convert
@@ -258,21 +291,7 @@ const AuthProvider = ({ children }) => {
     permutationBoxAfterSbox();
   };
 
-  ////////XOR operation between key and plain text binary
-
-  let xorString = "";
-  const xorOperation = () => {
-    xorString = "";
-    // console.log("key", key48bit.length);
-    // console.log("text", right48bits.length);
-    for (let i = 0; i < 48; i++) {
-      if (key48bit[i] === right48bits[i]) xorString += "0";
-      else xorString += "1";
-    }
-    // console.log("XOR String", xorString.length);
-  };
-
-  ///Permutaion box after s box 32bits done
+  ///Permutation box after s box 32bits input to 32 bits output
   let output32bits = "";
   const permutationBoxAfterSbox = () => {
     const P_BOX = [
@@ -285,25 +304,28 @@ const AuthProvider = ({ children }) => {
       output32bits += sbox32bitString[P_BOX[i] - 1];
       // -1 because arrays in JS are 0-based but DES table is 1-based
     }
+    console.log("Calling feistalRound");
     feistalRound();
   };
 
+  const feistalEntireRound = () => {
+    for (let i = 1; i <= 16; i++) {}
+  };
+
   let roundXorString = "";
-  let feistalRound = () => {
+  const feistalRound = () => {
     roundXorString = "";
     for (let i = 0; i < 32; i++) {
-      if (left32bits[i] === output32bits[i]) roundXorString += "0";
+      if (left32bitsPrimary[i] === output32bits[i]) roundXorString += "0";
       else roundXorString += "1";
     }
 
     console.log(roundXorString);
-    // console.log("Left 32 bits", left32bits);
+    // console.log("Left 32 bits", left32bitsPrimary);
     // console.log("Right output 32 bits", output32bits);
   };
 
-  useEffect(() => {
-    if (key48bit.length == 48 && right48bits.length == 48) xorOperation();
-  });
+  ///////////////Function Defination inside Feistal Round DES//////////////////////////////
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
