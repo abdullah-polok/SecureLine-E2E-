@@ -132,10 +132,12 @@ const AuthProvider = ({ children }) => {
     27, 19, 11, 3, 60, 52, 44, 36, 63, 55, 47, 39, 31, 23, 15, 7, 62, 54, 46,
     38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 28, 20, 12, 4,
   ];
+
+  ///For divided 56 bits key in two part 28 and 28 bits
+  const shifter = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
+
   let key56bit = "";
   const convert56BitBinaryKey = (localinitialKey64bit) => {
-    const SHIFTS = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
-
     key56bit = "";
     // Apply PC-1 permutation
     for (let i = 0; i < PC1.length; i++) {
@@ -144,6 +146,7 @@ const AuthProvider = ({ children }) => {
 
     // console.log("Key 56 bits " + key56bit.length);
     // console.log(key56bit);
+
     convert48BitBinaryKey(key56bit);
   };
 
@@ -154,15 +157,33 @@ const AuthProvider = ({ children }) => {
     34, 53, 46, 42, 50, 36, 29, 32,
   ];
 
-  let key48bit = "";
+  /// store 48-bit keys for all 16 rounds
+  let roundKeys48bit = [];
   const convert48BitBinaryKey = (local56bitKey) => {
-    key48bit = "";
-    for (let i = 0; i < PC2.length; i++) {
-      key48bit += local56bitKey[PC2[i] - 1]; // -1 because of 0-index
+    const SHIFTS = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
+
+    // Split into C and D halves (28 bits each)
+    let C = local56bitKey.slice(0, 28);
+    let D = local56bitKey.slice(28, 56);
+
+    // Generate 16 round keys
+    for (let round = 0; round < 16; round++) {
+      // Circular left shift
+      let shiftAmount = SHIFTS[round];
+      C = C.slice(shiftAmount) + C.slice(0, shiftAmount);
+      D = D.slice(shiftAmount) + D.slice(0, shiftAmount);
+
+      // Combine C and D for this round
+      let combinedCD = C + D;
+
+      // Apply PC-2 to get 48-bit key
+      let roundKey48 = "";
+      for (let i = 0; i < PC2.length; i++) {
+        roundKey48 += combinedCD[PC2[i] - 1];
+      }
+      roundKeys48bit.push(roundKey48);
     }
-    // console.log("Key 48 bits " + key48bit.length);
-    // console.log(key48bit);
-    // console.log("PC2" + PC2.length);
+    console.log(roundKeys48bit);
   };
 
   /////////////Key areas //////////////////////
@@ -192,10 +213,10 @@ const AuthProvider = ({ children }) => {
     xorString = "";
     // console.log("key", key48bit.length);
     // console.log("text", right48bits.length);
-    for (let i = 0; i < 48; i++) {
-      if (key48bit[i] === right48bits[i]) xorString += "0";
-      else xorString += "1";
-    }
+    // for (let i = 0; i < 48; i++) {
+    //   if (key48bit[i] === right48bits[i]) xorString += "0";
+    //   else xorString += "1";
+    // }
     // console.log("XOR String", xorString.length);
   };
 
