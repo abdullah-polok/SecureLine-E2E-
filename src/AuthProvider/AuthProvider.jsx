@@ -62,8 +62,6 @@ const AuthProvider = ({ children }) => {
     }
     sliceCharacter();
     generataRandomInitilKey();
-    xorOperation();
-    sboxcompression();
     // console.log(blocks[1].length);
     // convert56BitBinaryKey();
     // console.log(charBinary);
@@ -72,8 +70,6 @@ const AuthProvider = ({ children }) => {
   let left32bitsPrimary = "";
   let right32bitsPrimary = "";
 
-  let right32bitsCommon = "";
-  let left32bitsCommon = "";
   ///Left and Right slice two part 64 bits string
   const sliceCharacter = () => {
     if (messageBinary.length != 64) return;
@@ -82,7 +78,7 @@ const AuthProvider = ({ children }) => {
 
     // console.log("left", left32bitsPrimary.length);
     // console.log("Right", right32bitsPrimary.length);
-    expansionBox48bits();
+    feistalEntireRound(left32bitsPrimary, right32bitsPrimary);
   };
 
   ///Reverse Function Code:
@@ -132,9 +128,6 @@ const AuthProvider = ({ children }) => {
     27, 19, 11, 3, 60, 52, 44, 36, 63, 55, 47, 39, 31, 23, 15, 7, 62, 54, 46,
     38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 28, 20, 12, 4,
   ];
-
-  ///For divided 56 bits key in two part 28 and 28 bits
-  const shifter = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
 
   let key56bit = "";
   const convert56BitBinaryKey = (localinitialKey64bit) => {
@@ -190,8 +183,8 @@ const AuthProvider = ({ children }) => {
 
   ///////////////Function Defination inside DES//////////////////////////////
 
-  let right48bits = "";
-  const expansionBox48bits = () => {
+  const expansionBox48bits = (localRight32bits) => {
+    let right48bits = "";
     // Expansion table (DES E-box)
     const E = [
       32, 1, 2, 3, 4, 5, 4, 5, 6, 7, 8, 9, 8, 9, 10, 11, 12, 13, 12, 13, 14, 15,
@@ -200,29 +193,31 @@ const AuthProvider = ({ children }) => {
     ];
 
     for (let i = 0; i < E.length; i++) {
-      right48bits += right32bitsPrimary[E[i] - 1]; // -1 since JS is 0-indexed
+      right48bits += localRight32bits[E[i] - 1]; // -1 since JS is 0-indexed
     }
 
     // console.log(right48bits.length);
+    return right48bits;
   };
 
   ////////XOR operation between key and plain text binary 48 bits key and plain text
 
-  let xorString = "";
-  const xorOperation = () => {
-    xorString = "";
+  const xorOperation = (rightExpended48bitKey, eachRoundKey) => {
+    let xorString = "";
     // console.log("key", key48bit.length);
     // console.log("text", right48bits.length);
-    // for (let i = 0; i < 48; i++) {
-    //   if (key48bit[i] === right48bits[i]) xorString += "0";
-    //   else xorString += "1";
-    // }
+    for (let i = 0; i < rightExpended48bitKey.length; i++) {
+      if (rightExpended48bitKey[i] === eachRoundKey[i]) xorString += "0";
+      else xorString += "1";
+    }
     // console.log("XOR String", xorString.length);
+    return xorString;
   };
 
   ///S Box for 48 bits to 32convert
-  let sbox32bitString = "";
-  const sboxcompression = () => {
+
+  const sboxcompression = (localxorResult) => {
+    let sbox32bitString = "";
     const S_BOXES = [
       // S1
       [
@@ -289,7 +284,7 @@ const AuthProvider = ({ children }) => {
       ],
     ];
 
-    let copyXorString = xorString;
+    let copyXorString = localxorResult;
     sbox32bitString = "";
     for (let i = 0; i < 48; i += 6) {
       ///take 6bits chunk from 48 bits string;
@@ -309,12 +304,14 @@ const AuthProvider = ({ children }) => {
     }
 
     // console.log(sbox32bitString.length);
-    permutationBoxAfterSbox();
+    // permutationBoxAfterSbox();
+    return sbox32bitString;
   };
 
   ///Permutation box after s box 32bits input to 32 bits output
-  let output32bits = "";
-  const permutationBoxAfterSbox = () => {
+
+  const permutationBoxAfterSbox = (localSboxOutput) => {
+    let output32bits = "";
     const P_BOX = [
       16, 7, 20, 21, 29, 12, 28, 17, 1, 15, 23, 26, 5, 18, 31, 10, 2, 8, 24, 14,
       32, 27, 3, 9, 19, 13, 30, 6, 22, 11, 4, 25,
@@ -322,28 +319,36 @@ const AuthProvider = ({ children }) => {
     output32bits = "";
     for (let i = 0; i < P_BOX.length; i++) {
       // P_BOX[i] tells us which bit from input goes here
-      output32bits += sbox32bitString[P_BOX[i] - 1];
+      output32bits += localSboxOutput[P_BOX[i] - 1];
       // -1 because arrays in JS are 0-based but DES table is 1-based
     }
-    console.log("Calling feistalRound");
-    feistalRound();
+    return output32bits;
   };
 
-  const feistalEntireRound = () => {
-    for (let i = 1; i <= 16; i++) {}
-  };
+  const feistalEntireRound = (left32bits, right32bits) => {
+    for (let round = 0; round < 16; round++) {
+      // 1. Expansion (32 → 48 bits)
+      let expandedRight = expansionBox48bits(right32bits);
 
-  let roundXorString = "";
-  const feistalRound = () => {
-    roundXorString = "";
-    for (let i = 0; i < 32; i++) {
-      if (left32bitsPrimary[i] === output32bits[i]) roundXorString += "0";
-      else roundXorString += "1";
+      // 2. XOR with round key
+      let xorResult = xorOperation(expandedRight, roundKeys48bit[round]);
+
+      // 3. S-box substitution (48 → 32 bits)
+      let sBoxOutput = sboxcompression(xorResult);
+
+      // 4. P-box permutation
+      let pBoxOutput = permutationBoxAfterSbox(sBoxOutput);
+
+      // 5. Feistel XOR with left half
+      let newRight = xorOperation(left32bits, pBoxOutput);
+
+      // 6. Swap halves
+      left32bits = right32bits;
+      right32bits = newRight;
     }
 
-    console.log(roundXorString);
-    // console.log("Left 32 bits", left32bitsPrimary);
-    // console.log("Right output 32 bits", output32bits);
+    // After 16 rounds, swap halves (DES rule)
+    return [right32bits, left32bits];
   };
 
   ///////////////Function Defination inside Feistal Round DES//////////////////////////////
