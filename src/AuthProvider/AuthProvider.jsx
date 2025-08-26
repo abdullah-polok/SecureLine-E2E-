@@ -294,9 +294,10 @@ const AuthProvider = ({ children }) => {
       let sliceForRow = parseInt(chunk6bits[0] + chunk6bits[5], 2);
 
       ////Middle bits 1 to 5 means 4 bits directly convert binary string into decimal number for column
-      let sliceForColumn = parseInt(copyXorString.slice(1, 5), 2);
+      let sliceForColumn = parseInt(chunk6bits.slice(1, 5), 2);
 
-      let valuerOfSBox = S_BOXES[i / 6][sliceForRow][sliceForColumn];
+      let valuerOfSBox =
+        S_BOXES[Math.floor(i / 6)][sliceForRow][sliceForColumn];
 
       let outputOf32Bits = valuerOfSBox.toString(2).padStart(4, "0");
 
