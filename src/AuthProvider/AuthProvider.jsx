@@ -34,6 +34,7 @@ const AuthProvider = ({ children }) => {
   let messageBinary;
   const blocks = [];
   let roundKeys48bit = [];
+  let cipherText = "";
   const generalBinaryConvertor = () => {
     console.log("Message is coming", message);
     for (let i = 0; i < message.length; i += 8) {
@@ -90,7 +91,7 @@ const AuthProvider = ({ children }) => {
     /////combine right and left result;
     const combineRightLeft = right + left;
     cipherBlocks.push(combineRightLeft);
-    console.log(combineRightLeft);
+    console.log(cipherBlocks);
   };
 
   ///Reverse Function Code:
@@ -367,6 +368,22 @@ const AuthProvider = ({ children }) => {
   };
 
   ///////////////Function Defination inside Feistal Round DES//////////////////////////////
+
+  /////After feistal round inverse initial permutation////
+  ///64 bits input to 64 bits output
+
+  const inverseInitialPermutation = () => {
+    const inverseTable = [
+      40, 8, 48, 16, 56, 24, 64, 32, 39, 7, 47, 15, 55, 23, 63, 31, 38, 6, 46,
+      14, 54, 22, 62, 30, 37, 5, 45, 13, 53, 21, 61, 29, 36, 4, 44, 12, 52, 20,
+      60, 28, 35, 3, 43, 11, 51, 19, 59, 27, 34, 2, 42, 10, 50, 18, 58, 26, 33,
+      1, 41, 9, 49, 17, 57, 25,
+    ];
+
+    for (let i = 0; i < inverseTable.length; i++) {
+      cipherText += cipherBlocks[inverseTable[i] - 1];
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
