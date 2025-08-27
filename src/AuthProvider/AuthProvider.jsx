@@ -33,6 +33,7 @@ const AuthProvider = ({ children }) => {
 
   let messageBinary;
   const blocks = [];
+  let roundKeys48bit = [];
   const generalBinaryConvertor = () => {
     console.log("Message is coming", message);
     for (let i = 0; i < message.length; i += 8) {
@@ -59,9 +60,11 @@ const AuthProvider = ({ children }) => {
       }
       blocks.push(messageBinary);
       // console.log(messageBinary.length);
+      //process each block here
+      generataRandomInitilKey();
+      sliceCharacter(messageBinary);
     }
-    sliceCharacter();
-    generataRandomInitilKey();
+
     // console.log(blocks[1].length);
     // convert56BitBinaryKey();
     // console.log(charBinary);
@@ -71,21 +74,31 @@ const AuthProvider = ({ children }) => {
   let right32bitsPrimary = "";
 
   ///Left and Right slice two part 64 bits string
-  const sliceCharacter = () => {
-    if (messageBinary.length != 64) return;
-    left32bitsPrimary = messageBinary.slice(0, 32);
-    right32bitsPrimary = messageBinary.slice(32);
+  const sliceCharacter = (localMessageBinary) => {
+    if (localMessageBinary.length != 64) return;
+    left32bitsPrimary = localMessageBinary.slice(0, 32);
+    right32bitsPrimary = localMessageBinary.slice(32);
 
+    //// Store right and left result of feistal round
+    const [right, left] = feistalEntireRound(
+      left32bitsPrimary,
+      right32bitsPrimary
+    );
     // console.log("left", left32bitsPrimary.length);
     // console.log("Right", right32bitsPrimary.length);
-    feistalEntireRound(left32bitsPrimary, right32bitsPrimary);
+
+    /////combine right and left result;
+    const combineRightLeft = right + left;
+    cipherBlocks.push(combineRightLeft);
+    console.log(combineRightLeft);
   };
 
   ///Reverse Function Code:
+  const cipherBlocks = [];
   const binaryToText = () => {
     let message = "";
 
-    for (let block of blocks) {
+    for (let block of cipherBlocks) {
       for (let i = 0; i < block.length; i += 8) {
         const byte = block.slice(i, i + 8); // get 8 bits
 
@@ -151,8 +164,9 @@ const AuthProvider = ({ children }) => {
   ];
 
   /// store 48-bit keys for all 16 rounds
-  let roundKeys48bit = [];
+
   const convert48BitBinaryKey = (local56bitKey) => {
+    roundKeys48bit = [];
     const SHIFTS = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1];
 
     // Split into C and D halves (28 bits each)
