@@ -34,9 +34,12 @@ const AuthProvider = ({ children }) => {
   let messageBinary;
   const blocks = [];
   let roundKeys48bit = [];
+  const cipherBlocks = [];
   let cipherText = "";
   const generalBinaryConvertor = () => {
     console.log("Message is coming", message);
+
+    generataRandomInitilKey();
     for (let i = 0; i < message.length; i += 8) {
       let block = message.slice(i, i + 8);
       while (block.length < 8) {
@@ -62,10 +65,8 @@ const AuthProvider = ({ children }) => {
       blocks.push(messageBinary);
       // console.log(messageBinary.length);
       //process each block here
-      generataRandomInitilKey();
-      sliceCharacter(messageBinary);
     }
-
+    sliceCharacter(messageBinary);
     // console.log(blocks[1].length);
     // convert56BitBinaryKey();
     // console.log(charBinary);
@@ -90,12 +91,17 @@ const AuthProvider = ({ children }) => {
 
     /////combine right and left result;
     const combineRightLeft = right + left;
-    cipherBlocks.push(combineRightLeft);
-    console.log(cipherBlocks);
+    const finalBlock = inverseInitialPermutation(combineRightLeft);
+
+    // store the post-permutation block
+    cipherBlocks.push(finalBlock);
+    // console.log(cipherBlocks);
+    cipherText = finalBlock;
+    // console.log("Before inverse permutation:", combineRightLeft);
+    console.log("After inverse permutation:", cipherText);
   };
 
   ///Reverse Function Code:
-  const cipherBlocks = [];
   const binaryToText = () => {
     let message = "";
 
@@ -372,7 +378,8 @@ const AuthProvider = ({ children }) => {
   /////After feistal round inverse initial permutation////
   ///64 bits input to 64 bits output
 
-  const inverseInitialPermutation = () => {
+  const inverseInitialPermutation = (localCombineRightLeft) => {
+    let localCipherText = "";
     const inverseTable = [
       40, 8, 48, 16, 56, 24, 64, 32, 39, 7, 47, 15, 55, 23, 63, 31, 38, 6, 46,
       14, 54, 22, 62, 30, 37, 5, 45, 13, 53, 21, 61, 29, 36, 4, 44, 12, 52, 20,
@@ -380,9 +387,15 @@ const AuthProvider = ({ children }) => {
       1, 41, 9, 49, 17, 57, 25,
     ];
 
+    let block = localCombineRightLeft; // take last 64-bit block
+    let permuted = "";
+
     for (let i = 0; i < inverseTable.length; i++) {
-      cipherText += cipherBlocks[inverseTable[i] - 1];
+      permuted += block[inverseTable[i] - 1];
     }
+
+    localCipherText = permuted;
+    return localCipherText;
   };
 
   useEffect(() => {
