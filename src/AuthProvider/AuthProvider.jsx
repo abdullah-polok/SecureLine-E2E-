@@ -2,14 +2,20 @@ import { onAuthStateChanged } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../firebase.config";
 import { AuthContext } from "./AuthContext";
-import { collection, getDoc, getDocs } from "firebase/firestore";
-
+import {
+  addDoc,
+  collection,
+  getDocs,
+  serverTimestamp,
+} from "firebase/firestore";
+import JSEncrypt from "jsencrypt";
+import { useParams } from "react-router";
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [allusers, setAllUsers] = useState([]);
-
+  const [receiverId, setReceiverId] = useState("");
   ////Get all users
   const getAllUsers = async () => {
     try {
@@ -24,10 +30,8 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  ////////////////////////////////////////////////////////////
-
+  /////////////////DES Process///////////////////////////////////
   //////DES Method manually set up
-  let char = "Hello world good boy i am abdullah who are you ";
   // const ass = char.charCodeAt(0);
   // let num = ass;
 
@@ -97,8 +101,9 @@ const AuthProvider = ({ children }) => {
     cipherBlocks.push(finalBlock);
     // console.log(cipherBlocks);
     cipherText = finalBlock;
+    binaryToHex(cipherText);
     // console.log("Before inverse permutation:", combineRightLeft);
-    console.log("After inverse permutation:", cipherText);
+    // console.log("After inverse permutation:", cipherText);
   };
 
   ///Reverse Function Code:
@@ -197,7 +202,7 @@ const AuthProvider = ({ children }) => {
       }
       roundKeys48bit.push(roundKey48);
     }
-    console.log(roundKeys48bit);
+    // console.log(roundKeys48bit);
   };
 
   /////////////Key areas //////////////////////
@@ -398,6 +403,83 @@ const AuthProvider = ({ children }) => {
     return localCipherText;
   };
 
+  /////////////////DES Process///////////////////////////////////
+
+  /////Binary string base 64 character string convert
+  let ciphertextHex = "";
+  const binaryToHex = (binaryString) => {
+    ciphertextHex = parseInt(binaryString, 2).toString(16).toUpperCase();
+    console.log("Cipher HEX", ciphertextHex);
+    console.log("56 bit key", key56bit.length);
+    rsaKeyPair();
+  };
+
+  ///////////////////RSA process//////////////////////////////
+
+  const rsaKeyPair = () => {
+    // Generate RSA key pair (only once, or store securely)
+    const encryptor = new JSEncrypt({ default_key_size: 2048 });
+    const publicKey = encryptor.getPublicKey();
+    const privateKey = encryptor.getPrivateKey();
+
+    // console.log(publicKey);
+    // console.log(privateKey);
+
+    // Encrypt your DES 56-bit key
+    const desKey = key56bit;
+
+    const encryptorWithPub = new JSEncrypt();
+    encryptorWithPub.setPublicKey(publicKey);
+
+    const encryptedDESKey = encryptorWithPub.encrypt(desKey);
+
+    console.log("Original DES Key", desKey);
+    console.log("Encrypted DES Key (Base64):", encryptedDESKey);
+
+    // Decrypt with private key
+    const decryptor = new JSEncrypt();
+    decryptor.setPrivateKey(privateKey);
+
+    const decryptedDESKey = decryptor.decrypt(encryptedDESKey);
+    console.log("Decrypted DES Key:", decryptedDESKey);
+
+    console.log("sender Id", user.uid);
+    console.log("Reciecver id", receiverId);
+    sendMessage(user.uid, receiverId, ciphertextHex, encryptedDESKey);
+  };
+
+  //////////////////////////////////////////////////////////
+
+  ///////////////////////Firebase Process////////////////////////////
+
+  const sendMessage = async (
+    senderId,
+    receiverId,
+    encryptedMessage,
+    encryptedDESKey
+  ) => {
+    const chatId =
+      senderId < receiverId
+        ? senderId + "_" + receiverId
+        : receiverId + "_" + senderId;
+
+    try {
+      const messageRef = collection(db, "chats", chatId, "messages");
+
+      await addDoc(messageRef, {
+        senderId,
+        receiverId,
+        message: encryptedMessage, // DES encrypted message (Base64)
+        encryptedDESKey: encryptedDESKey, // RSA encrypted DES key
+        timestamp: serverTimestamp(),
+      });
+
+      console.log("Message stored successfully!");
+    } catch (error) {
+      console.error("Error storing message:", error);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -415,9 +497,11 @@ const AuthProvider = ({ children }) => {
     allusers,
     message,
     setMessage,
+    setReceiverId,
     generalBinaryConvertor,
     binaryToText,
     generataRandomInitilKey,
+    sendMessage,
   };
   return (
     <AuthContext.Provider value={userInfo}>{children}</AuthContext.Provider>

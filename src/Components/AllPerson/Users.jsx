@@ -4,7 +4,7 @@ import { AuthContext } from "../../AuthProvider/AuthContext";
 
 const Users = () => {
   const { allusers } = useContext(AuthContext);
-  console.log(allusers);
+  // console.log(allusers);
   return (
     <div className="flex gap-x-4">
       {allusers.map((person) => (
