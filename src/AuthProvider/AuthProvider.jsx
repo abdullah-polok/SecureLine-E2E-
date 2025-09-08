@@ -5,8 +5,14 @@ import { AuthContext } from "./AuthContext";
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
   getDocs,
+  onSnapshot,
+  orderBy,
+  query,
   serverTimestamp,
+  where,
 } from "firebase/firestore";
 import JSEncrypt from "jsencrypt";
 import { useParams } from "react-router";
@@ -16,6 +22,9 @@ const AuthProvider = ({ children }) => {
   const [message, setMessage] = useState("");
   const [allusers, setAllUsers] = useState([]);
   const [receiverId, setReceiverId] = useState("");
+  const [storedMessages, setStoredMessages] = useState([]);
+  const [chatId, setChatId] = useState("");
+
   ////Get all users
   const getAllUsers = async () => {
     try {
@@ -41,7 +50,7 @@ const AuthProvider = ({ children }) => {
   const cipherBlocks = [];
   let cipherText = "";
   const generalBinaryConvertor = () => {
-    console.log("Message is coming", message);
+    // console.log("Message is coming", message);
 
     generataRandomInitilKey();
     for (let i = 0; i < message.length; i += 8) {
@@ -409,8 +418,8 @@ const AuthProvider = ({ children }) => {
   let ciphertextHex = "";
   const binaryToHex = (binaryString) => {
     ciphertextHex = parseInt(binaryString, 2).toString(16).toUpperCase();
-    console.log("Cipher HEX", ciphertextHex);
-    console.log("56 bit key", key56bit.length);
+    // console.log("Cipher HEX", ciphertextHex);
+    // console.log("56 bit key", key56bit.length);
     rsaKeyPair();
   };
 
@@ -433,53 +442,81 @@ const AuthProvider = ({ children }) => {
 
     const encryptedDESKey = encryptorWithPub.encrypt(desKey);
 
-    console.log("Original DES Key", desKey);
-    console.log("Encrypted DES Key (Base64):", encryptedDESKey);
+    // console.log("Original DES Key", desKey);
+    // console.log("Encrypted DES Key (Base64):", encryptedDESKey);
 
     // Decrypt with private key
     const decryptor = new JSEncrypt();
     decryptor.setPrivateKey(privateKey);
 
     const decryptedDESKey = decryptor.decrypt(encryptedDESKey);
-    console.log("Decrypted DES Key:", decryptedDESKey);
+    // console.log("Decrypted DES Key:", decryptedDESKey);
 
-    console.log("sender Id", user.uid);
-    console.log("Reciecver id", receiverId);
-    sendMessage(user.uid, receiverId, ciphertextHex, encryptedDESKey);
+    // console.log("sender Id", user.uid);
+    // console.log("Reciecver id", receiverId);
+
+    ////create combined  chatId
+    // Ensure chatId is consistent for both users
+    setChatId([user.uid, receiverId].sort().join("_"));
+
+    sendMessage(user.uid, receiverId, encryptedDESKey);
   };
 
   //////////////////////////////////////////////////////////
 
   ///////////////////////Firebase Process////////////////////////////
+  const sendMessage = async (senderId, receiverId, encryptedDESKey) => {
+    const currentUser = auth.currentUser;
 
-  const sendMessage = async (
-    senderId,
-    receiverId,
-    encryptedMessage,
-    encryptedDESKey
-  ) => {
-    const chatId =
-      senderId < receiverId
-        ? senderId + "_" + receiverId
-        : receiverId + "_" + senderId;
-
-    try {
-      const messageRef = collection(db, "chats", chatId, "messages");
-
-      await addDoc(messageRef, {
-        senderId,
-        receiverId,
-        message: encryptedMessage, // DES encrypted message (Base64)
-        encryptedDESKey: encryptedDESKey, // RSA encrypted DES key
-        timestamp: serverTimestamp(),
-      });
-
-      console.log("Message stored successfully!");
-    } catch (error) {
-      console.error("Error storing message:", error);
+    if (!currentUser || currentUser.uid !== senderId) {
+      throw new Error("Unauthorized: senderId mismatch");
     }
+
+    //Make sure receiverId is valid and exists in Users
+    const receiverDoc = await getDoc(doc(db, "Users", receiverId));
+    if (!receiverDoc.exists()) {
+      throw new Error("Invalid receiverId");
+    }
+
+    const messageData = {
+      senderId,
+      receiverId,
+      ciphertextHex,
+      encryptedDESKey,
+      createdAt: serverTimestamp(),
+    };
+
+    await addDoc(collection(db, "chats", chatId, "messages"), messageData);
+    setMessage("");
   };
 
+  useEffect(() => {
+    if (!user?.uid || !receiverId) return;
+
+    const chatId = [user.uid, receiverId].sort().join("_"); // recompute every time
+
+    const q = query(
+      collection(db, "chats", chatId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        // Verify messages belong only to this chat pair
+        .filter(
+          (m) =>
+            (m.senderId === user.uid && m.receiverId === receiverId) ||
+            (m.senderId === receiverId && m.receiverId === user.uid)
+        );
+
+      setStoredMessages(msgs);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid, receiverId]);
+
+  console.log(storedMessages);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -497,11 +534,13 @@ const AuthProvider = ({ children }) => {
     allusers,
     message,
     setMessage,
+    receiverId,
     setReceiverId,
     generalBinaryConvertor,
     binaryToText,
     generataRandomInitilKey,
     sendMessage,
+    storedMessages,
   };
   return (
     <AuthContext.Provider value={userInfo}>{children}</AuthContext.Provider>
