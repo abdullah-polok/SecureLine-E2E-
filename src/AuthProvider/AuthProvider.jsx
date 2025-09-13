@@ -23,7 +23,6 @@ const AuthProvider = ({ children }) => {
   const [allusers, setAllUsers] = useState([]);
   const [receiverId, setReceiverId] = useState("");
   const [storedMessages, setStoredMessages] = useState([]);
-  const [chatId, setChatId] = useState("");
 
   ////Get all users
   const getAllUsers = async () => {
@@ -50,7 +49,7 @@ const AuthProvider = ({ children }) => {
   const cipherBlocks = [];
   let cipherText = "";
   const generalBinaryConvertor = () => {
-    // console.log("Message is coming", message);
+    console.log("Message is coming", message);
 
     generataRandomInitilKey();
     for (let i = 0; i < message.length; i += 8) {
@@ -79,10 +78,12 @@ const AuthProvider = ({ children }) => {
       // console.log(messageBinary.length);
       //process each block here
     }
-    sliceCharacter(messageBinary);
+    const sliceText = sliceCharacter(messageBinary);
     // console.log(blocks[1].length);
     // convert56BitBinaryKey();
     // console.log(charBinary);
+
+    return sliceText;
   };
 
   let left32bitsPrimary = "";
@@ -110,9 +111,10 @@ const AuthProvider = ({ children }) => {
     cipherBlocks.push(finalBlock);
     // console.log(cipherBlocks);
     cipherText = finalBlock;
-    binaryToHex(cipherText);
+    const hexText = binaryToHex(cipherText);
     // console.log("Before inverse permutation:", combineRightLeft);
     // console.log("After inverse permutation:", cipherText);
+    return hexText;
   };
 
   ///Reverse Function Code:
@@ -415,11 +417,24 @@ const AuthProvider = ({ children }) => {
   /////////////////DES Process///////////////////////////////////
 
   /////Binary string base 64 character string convert
-  let ciphertextHex = "";
+  // const [ciphertextHex, setCipertextHex] = useState("");
   const binaryToHex = (binaryString) => {
-    ciphertextHex = parseInt(binaryString, 2).toString(16).toUpperCase();
+    const cipherHex = parseInt(binaryString, 2).toString(16).toUpperCase();
     // console.log("Cipher HEX", ciphertextHex);
     // console.log("56 bit key", key56bit.length);
+    return cipherHex;
+  };
+
+  const encryptDESKeyForReceiver = async (receiverId) => {
+    // 2. Get receiver's public key
+    const receiverDoc = await getDoc(doc(db, "Users", receiverId));
+    if (!receiverDoc.exists()) throw new Error("Receiver not found");
+    const getReceiverPublicKey = receiverDoc.data().publicKey;
+    console.log("Public key", getReceiverPublicKey);
+    //Encrypt DES key with receiver’s public key
+    const rsa = new JSEncrypt();
+    rsa.setPublicKey(getReceiverPublicKey);
+    return rsa.encrypt(key56bit);
   };
 
   //////////////////////////////////////////////////////////
@@ -428,9 +443,10 @@ const AuthProvider = ({ children }) => {
   const sendMessage = async (
     senderId,
     receiverId,
-    encryptedDESKey,
-    publicKey
+    cipherTexthex,
+    encryptedDESKey
   ) => {
+    const chatId = [senderId, receiverId].sort().join("_");
     const currentUser = auth.currentUser;
 
     if (!currentUser || currentUser.uid !== senderId) {
@@ -446,9 +462,8 @@ const AuthProvider = ({ children }) => {
     const messageData = {
       senderId,
       receiverId,
-      ciphertextHex,
+      cipherTexthex,
       encryptedDESKey,
-      publicKey,
       createdAt: serverTimestamp(),
     };
 
@@ -511,6 +526,9 @@ const AuthProvider = ({ children }) => {
     generataRandomInitilKey,
     sendMessage,
     storedMessages,
+    encryptDESKeyForReceiver,
+    // ciphertextHex,
+    // setCipertextHex,
   };
   return (
     <AuthContext.Provider value={userInfo}>{children}</AuthContext.Provider>

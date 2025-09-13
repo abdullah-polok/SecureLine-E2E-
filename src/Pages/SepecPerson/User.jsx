@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../../firebase.config";
 const User = () => {
-  const { storedMessages, setReceiverId } = useContext(AuthContext);
+  const { storedMessages } = useContext(AuthContext);
   const navigate = useNavigate();
   const [messagesList, setMessagesList] = useState([]);
   const [chatId, setChatId] = useState(null);
@@ -26,12 +26,32 @@ const User = () => {
     generalBinaryConvertor,
     binaryToText,
     generataRandomInitilKey,
+    encryptDESKeyForReceiver,
+    sendMessage,
   } = useContext(AuthContext);
   const { id } = useParams(); // <-- get dynamic portion of a link
-  setReceiverId(id);
-  const getInputText = (event) => {
-    setMessage(event.target.value);
+
+  const getInputText = (e) => {
+    setMessage(e.target.value);
   };
+  const handleSendMessage = async () => {
+    // 1. Generate DES encryption of message
+    const ciperText = generalBinaryConvertor(message); // make sure this sets `ciphertextHex`
+
+    // 2. Encrypt the DES key with receiver's public key
+    const encryptedDESKey = await encryptDESKeyForReceiver(id); // await the Promise
+
+    // console.log(user.uid, "\n", id);
+    // console.log("cipherTextHex :", ciperText);
+    // console.log(encryptedDESKey);
+
+    // Call sendMessage with all required fields
+    await sendMessage(user.uid, id, ciperText, encryptedDESKey);
+
+    //Clear input after sending
+    setMessage("");
+  };
+
   // console.log(storedMessages);
   return (
     <div>
@@ -79,7 +99,7 @@ const User = () => {
             />
           </div>
           <div className="text-xl">
-            <button onClick={generalBinaryConvertor}>
+            <button onClick={handleSendMessage}>
               <IoSend />
             </button>
           </div>
