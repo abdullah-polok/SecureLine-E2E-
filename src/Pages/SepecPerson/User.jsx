@@ -32,7 +32,7 @@ const User = () => {
   const getInputText = (event) => {
     setMessage(event.target.value);
   };
-  console.log(storedMessages);
+  // console.log(storedMessages);
   return (
     <div>
       <div className="flex items-center bg-gray-300 p-2">

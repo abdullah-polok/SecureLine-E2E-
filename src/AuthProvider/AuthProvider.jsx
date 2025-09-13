@@ -129,7 +129,7 @@ const AuthProvider = ({ children }) => {
         message += char;
       }
     }
-    console.log(message);
+    // console.log(message);
   };
 
   /////////////Key areas //////////////////////
@@ -420,52 +420,17 @@ const AuthProvider = ({ children }) => {
     ciphertextHex = parseInt(binaryString, 2).toString(16).toUpperCase();
     // console.log("Cipher HEX", ciphertextHex);
     // console.log("56 bit key", key56bit.length);
-    rsaKeyPair();
-  };
-
-  ///////////////////RSA process//////////////////////////////
-
-  const rsaKeyPair = () => {
-    // Generate RSA key pair (only once, or store securely)
-    const encryptor = new JSEncrypt({ default_key_size: 2048 });
-    const publicKey = encryptor.getPublicKey();
-    const privateKey = encryptor.getPrivateKey();
-
-    // console.log(publicKey);
-    // console.log(privateKey);
-
-    // Encrypt your DES 56-bit key
-    const desKey = key56bit;
-
-    const encryptorWithPub = new JSEncrypt();
-    encryptorWithPub.setPublicKey(publicKey);
-
-    const encryptedDESKey = encryptorWithPub.encrypt(desKey);
-
-    // console.log("Original DES Key", desKey);
-    // console.log("Encrypted DES Key (Base64):", encryptedDESKey);
-
-    // Decrypt with private key
-    const decryptor = new JSEncrypt();
-    decryptor.setPrivateKey(privateKey);
-
-    const decryptedDESKey = decryptor.decrypt(encryptedDESKey);
-    // console.log("Decrypted DES Key:", decryptedDESKey);
-
-    // console.log("sender Id", user.uid);
-    // console.log("Reciecver id", receiverId);
-
-    ////create combined  chatId
-    // Ensure chatId is consistent for both users
-    setChatId([user.uid, receiverId].sort().join("_"));
-
-    sendMessage(user.uid, receiverId, encryptedDESKey);
   };
 
   //////////////////////////////////////////////////////////
 
   ///////////////////////Firebase Process////////////////////////////
-  const sendMessage = async (senderId, receiverId, encryptedDESKey) => {
+  const sendMessage = async (
+    senderId,
+    receiverId,
+    encryptedDESKey,
+    publicKey
+  ) => {
     const currentUser = auth.currentUser;
 
     if (!currentUser || currentUser.uid !== senderId) {
@@ -483,12 +448,17 @@ const AuthProvider = ({ children }) => {
       receiverId,
       ciphertextHex,
       encryptedDESKey,
+      publicKey,
       createdAt: serverTimestamp(),
     };
 
     await addDoc(collection(db, "chats", chatId, "messages"), messageData);
     setMessage("");
   };
+
+  useEffect(() => {
+    console.log(storedMessages);
+  }, [storedMessages]);
 
   useEffect(() => {
     if (!user?.uid || !receiverId) return;
@@ -516,7 +486,7 @@ const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, [user?.uid, receiverId]);
 
-  console.log(storedMessages);
+  // console.log(storedMessages);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);

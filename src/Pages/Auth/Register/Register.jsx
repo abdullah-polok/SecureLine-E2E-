@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { auth, db } from "../../../../firebase.config";
 import logo from "../../../assets/wmremove-transformed-removebg-preview.png";
 import { doc, setDoc } from "firebase/firestore";
+import JSEncrypt from "jsencrypt";
 const Register = () => {
   const navigate = useNavigate();
   const [registerError, setRegisterError] = useState("");
@@ -68,13 +69,23 @@ const Register = () => {
         displayName: name,
       });
 
+      ///generate rsa key pair for each using when registering account
+
+      const rsa = new JSEncrypt({ default_key_size: 2048 });
+      const publicKey = rsa.getPublicKey();
+      const privateKey = rsa.getPrivateKey();
+
       // Save user info in Firestore
       await setDoc(doc(db, "Users", user.uid), {
         uid: user.uid,
         displayName: name,
         email: user.email,
+        publicKey: publicKey,
         createdAt: new Date(),
       });
+
+      ///save the private key on device
+      localStorage.setItem("key", privateKey);
 
       toast("User created successfully");
 
