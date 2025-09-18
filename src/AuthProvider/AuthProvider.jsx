@@ -166,6 +166,7 @@ const AuthProvider = ({ children }) => {
   ];
 
   let key56bit = "";
+  let key56Hex = "";
   const convert56BitBinaryKey = (localinitialKey64bit) => {
     key56bit = "";
     // Apply PC-1 permutation
@@ -175,7 +176,8 @@ const AuthProvider = ({ children }) => {
 
     // console.log("Key 56 bits " + key56bit.length);
     // console.log(key56bit);
-
+    // Convert 56-bit binary to hex (14 characters)
+    key56Hex = parseInt(key56bit, 2).toString(16).padStart(14, "0");
     convert48BitBinaryKey(key56bit);
   };
 
@@ -362,30 +364,66 @@ const AuthProvider = ({ children }) => {
     }
     return output32bits;
   };
+  ///Encryption function
+  const feistalEntireRound = (
+    left32bits,
+    right32bits,
+    roundKeys48bit,
+    decrypt = false
+  ) => {
+    // Use keys in reverse order for decryption
+    const keys = decrypt ? [...roundKeys48bit].reverse() : roundKeys48bit;
 
-  const feistalEntireRound = (left32bits, right32bits) => {
     for (let round = 0; round < 16; round++) {
-      // 1. Expansion (32 → 48 bits)
-      let expandedRight = expansionBox48bits(right32bits);
+      // 1️⃣ Expansion (32 → 48 bits)
+      const expandedRight = expansionBox48bits(right32bits);
 
-      // 2. XOR with round key
-      let xorResult = xorOperation(expandedRight, roundKeys48bit[round]);
+      // 2️⃣ XOR with round key
+      const xorResult = xorOperation(expandedRight, keys[round]);
 
-      // 3. S-box substitution (48 → 32 bits)
-      let sBoxOutput = sboxcompression(xorResult);
+      // 3️⃣ S-box substitution (48 → 32 bits)
+      const sBoxOutput = sboxcompression(xorResult);
 
-      // 4. P-box permutation
-      let pBoxOutput = permutationBoxAfterSbox(sBoxOutput);
+      // 4️⃣ P-box permutation
+      const pBoxOutput = permutationBoxAfterSbox(sBoxOutput);
 
-      // 5. Feistel XOR with left half
-      let newRight = xorOperation(left32bits, pBoxOutput);
+      // 5️⃣ Feistel XOR with left half
+      const newRight = xorOperation(left32bits, pBoxOutput);
 
-      // 6. Swap halves
+      // 6️⃣ Swap halves
       left32bits = right32bits;
       right32bits = newRight;
     }
 
-    // After 16 rounds, swap halves (DES rule)
+    // 16 rounds done → final swap for DES
+    return [right32bits, left32bits];
+  };
+
+  ////Decryption function
+  const feistalEntireRoundWithKeys = (left32bits, right32bits, keys) => {
+    // keys should already be reversed for decryption
+    for (let round = 0; round < 16; round++) {
+      // 1️⃣ Expansion (32 → 48 bits)
+      const expandedRight = expansionBox48bits(right32bits);
+
+      // 2️⃣ XOR with round key
+      const xorResult = xorOperation(expandedRight, keys[round]);
+
+      // 3️⃣ S-box substitution (48 → 32 bits)
+      const sBoxOutput = sboxcompression(xorResult);
+
+      // 4️⃣ P-box permutation
+      const pBoxOutput = permutationBoxAfterSbox(sBoxOutput);
+
+      // 5️⃣ Feistel XOR with left half
+      const newRight = xorOperation(left32bits, pBoxOutput);
+
+      // 6️⃣ Swap halves
+      left32bits = right32bits;
+      right32bits = newRight;
+    }
+
+    // 16 rounds done → final swap for DES
     return [right32bits, left32bits];
   };
 
@@ -434,7 +472,71 @@ const AuthProvider = ({ children }) => {
     //Encrypt DES key with receiver’s public key
     const rsa = new JSEncrypt();
     rsa.setPublicKey(getReceiverPublicKey);
-    return rsa.encrypt(key56bit);
+    return rsa.encrypt(key56Hex);
+  };
+
+  // Helper: Convert hex string to binary
+  const hexToBinary = (hex) =>
+    hex
+      .match(/.{1,2}/g)
+      .map((byte) => parseInt(byte, 16).toString(2).padStart(8, "0"))
+      .join("");
+
+  // Run DES decryption on a single block
+  const runDESDecryption = (ciphertextHex, desKey56bit) => {
+    // Convert hex → binary 64-bit
+    const ciphertextBinary = hexToBinary(ciphertextHex);
+
+    // Split into left/right
+    const left32 = ciphertextBinary.slice(0, 32);
+    const right32 = ciphertextBinary.slice(32);
+
+    // Generate round keys for decryption (reverse order!)
+    convert48BitBinaryKey(desKey56bit);
+    const reversedRoundKeys = [...roundKeys48bit].reverse();
+
+    // Run Feistel with reversed keys
+    const [decryptedRight, decryptedLeft] = feistalEntireRoundWithKeys(
+      left32,
+      right32,
+      reversedRoundKeys
+    );
+
+    const combinedBinary = inverseInitialPermutation(
+      decryptedRight + decryptedLeft
+    );
+
+    return binaryToText(combinedBinary).replace(/\0+$/, "");
+  };
+
+  // Decrypt multiple messages
+  const decryptMessages = (messages) => {
+    const receiverPrivateKey = localStorage.getItem("key"); // your saved private key
+    console.log("Private key from storage:", receiverPrivateKey);
+
+    if (!receiverPrivateKey) throw new Error("Private key not found on device");
+
+    const rsa = new JSEncrypt();
+    rsa.setPrivateKey(receiverPrivateKey);
+
+    return messages.map((msg) => {
+      try {
+        // 1️⃣ Decrypt DES key first (RSA → hex string)
+        const desKeyHex = rsa.decrypt(msg.encryptedDESKey);
+        if (!desKeyHex) throw new Error("DES key decryption failed");
+
+        // 2️⃣ Convert DES key hex → binary (56-bit key for DES)
+        const desKeyBinary = hexToBinary(desKeyHex);
+
+        // 3️⃣ Decrypt actual message with DES
+        const plaintext = runDESDecryption(msg.cipherTexthex, desKeyBinary);
+
+        return { ...msg, plaintext };
+      } catch (error) {
+        console.error("Decryption failed for message ID:", msg.id, error);
+        return { ...msg, plaintext: "[Cannot decrypt]" };
+      }
+    });
   };
 
   //////////////////////////////////////////////////////////
@@ -471,37 +573,8 @@ const AuthProvider = ({ children }) => {
     setMessage("");
   };
 
-  useEffect(() => {
-    console.log(storedMessages);
-  }, [storedMessages]);
+  // console.log("Stored Meesagae", storedMessages);
 
-  useEffect(() => {
-    if (!user?.uid || !receiverId) return;
-
-    const chatId = [user.uid, receiverId].sort().join("_"); // recompute every time
-
-    const q = query(
-      collection(db, "chats", chatId, "messages"),
-      orderBy("createdAt", "asc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        // Verify messages belong only to this chat pair
-        .filter(
-          (m) =>
-            (m.senderId === user.uid && m.receiverId === receiverId) ||
-            (m.senderId === receiverId && m.receiverId === user.uid)
-        );
-
-      setStoredMessages(msgs);
-    });
-
-    return () => unsubscribe();
-  }, [user?.uid, receiverId]);
-
-  // console.log(storedMessages);
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -526,7 +599,10 @@ const AuthProvider = ({ children }) => {
     generataRandomInitilKey,
     sendMessage,
     storedMessages,
+    setStoredMessages,
     encryptDESKeyForReceiver,
+    decryptMessages,
+    // desFunctions
     // ciphertextHex,
     // setCipertextHex,
   };

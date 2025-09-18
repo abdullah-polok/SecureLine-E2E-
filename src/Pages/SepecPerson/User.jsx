@@ -3,33 +3,48 @@ import { useNavigate, useParams } from "react-router";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { AuthContext } from "../../AuthProvider/AuthContext";
 import { IoSend } from "react-icons/io5";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { db } from "../../../firebase.config";
 const User = () => {
-  const { storedMessages } = useContext(AuthContext);
   const navigate = useNavigate();
   const [messagesList, setMessagesList] = useState([]);
   const [chatId, setChatId] = useState(null);
+  const [decryptMess, setDecryptMess] = useState([]);
   const {
     user,
     message,
     setMessage,
     generalBinaryConvertor,
     binaryToText,
-    generataRandomInitilKey,
     encryptDESKeyForReceiver,
     sendMessage,
+    decryptMessages,
+    // desFunctions,
   } = useContext(AuthContext);
   const { id } = useParams(); // <-- get dynamic portion of a link
+
+  const [storedMessages, setStoredMessages] = useState([]);
+
+  useEffect(() => {
+    if (!user?.uid || !id) return;
+
+    const chatId = [user.uid, id].sort().join("_");
+    const q = query(
+      collection(db, "chats", chatId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      // Decrypt all messages before storing
+      const decryptedMsgs = decryptMessages(msgs);
+      setStoredMessages(decryptedMsgs);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid, id]);
+  // console.log(storedMessages);
 
   const getInputText = (e) => {
     setMessage(e.target.value);
