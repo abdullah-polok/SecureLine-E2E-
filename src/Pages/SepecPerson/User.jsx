@@ -4,11 +4,11 @@ import { IoChevronBackOutline } from "react-icons/io5";
 import { AuthContext } from "../../AuthProvider/AuthContext";
 import { IoSend } from "react-icons/io5";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "../../../firebase.config";
+import { auth, db } from "../../../firebase.config";
+import useFetchMessages from "../../Hook/useFetchMessages";
 const User = () => {
   const navigate = useNavigate();
   const [messagesList, setMessagesList] = useState([]);
-  const [chatId, setChatId] = useState(null);
   const [decryptMess, setDecryptMess] = useState([]);
   const {
     user,
@@ -22,28 +22,27 @@ const User = () => {
     // desFunctions,
   } = useContext(AuthContext);
   const { id } = useParams(); // <-- get dynamic portion of a link
+  const { storedMessages, chatId } = useFetchMessages(id);
 
-  const [storedMessages, setStoredMessages] = useState([]);
+  // useEffect(() => {
+  //   if (!user?.uid || !id) return;
 
-  useEffect(() => {
-    if (!user?.uid || !id) return;
+  //   const chatId = [user.uid, id].sort().join("_");
+  //   const q = query(
+  //     collection(db, "chats", chatId, "messages"),
+  //     orderBy("createdAt", "asc")
+  //   );
 
-    const chatId = [user.uid, id].sort().join("_");
-    const q = query(
-      collection(db, "chats", chatId, "messages"),
-      orderBy("createdAt", "asc")
-    );
+  //   const unsubscribe = onSnapshot(q, (snapshot) => {
+  //     const msgs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  //     // Decrypt all messages before storing
+  //     // const decryptedMsgs = decryptMessages(msgs);
+  //     setStoredMessages(msgs);
+  //   });
 
-      // Decrypt all messages before storing
-      const decryptedMsgs = decryptMessages(msgs);
-      setStoredMessages(decryptedMsgs);
-    });
-
-    return () => unsubscribe();
-  }, [user?.uid, id]);
+  //   return () => unsubscribe();
+  // }, [user?.uid, id]);
   // console.log(storedMessages);
 
   const getInputText = (e) => {

@@ -12,6 +12,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   where,
 } from "firebase/firestore";
 import JSEncrypt from "jsencrypt";
@@ -39,15 +40,17 @@ const AuthProvider = ({ children }) => {
   };
 
   /////////////////DES Process///////////////////////////////////
+
+  let messageBinary;
+  let blocks = [];
+  let roundKeys48bit = [];
+  const cipherBlocks = [];
+  let cipherText = "";
+
   //////DES Method manually set up
   // const ass = char.charCodeAt(0);
   // let num = ass;
 
-  let messageBinary;
-  const blocks = [];
-  let roundKeys48bit = [];
-  const cipherBlocks = [];
-  let cipherText = "";
   const generalBinaryConvertor = () => {
     console.log("Message is coming", message);
 
@@ -86,34 +89,78 @@ const AuthProvider = ({ children }) => {
     return sliceText;
   };
 
+  // const generalBinaryConvertor = () => {
+  //   console.log("Message is coming", message);
+
+  //   generataRandomInitilKey();
+  //   blocks = []; // store sliceCharacter outputs
+
+  //   for (let i = 0; i < message.length; i += 8) {
+  //     let block = message.slice(i, i + 8);
+
+  //     while (block.length < 8) {
+  //       block += "\0"; // Null character padding
+  //     }
+
+  //     messageBinary = "";
+
+  //     for (let j = 0; j < block.length; j++) {
+  //       let asciiValue = block.charCodeAt(j);
+  //       let bin = "";
+  //       while (asciiValue > 0) {
+  //         bin = (asciiValue % 2) + bin;
+  //         asciiValue = Math.floor(asciiValue / 2);
+  //       }
+
+  //       bin = bin.padStart(8, "0");
+  //       messageBinary += bin;
+  //     }
+
+  //     blocks.push(messageBinary);
+
+  //     // process this block immediately
+  //     sliceCharacter(messageBinary);
+  //   }
+
+  //   return blocks; // return all block results
+  // };
+
   let left32bitsPrimary = "";
   let right32bitsPrimary = "";
 
   ///Left and Right slice two part 64 bits string
+  /*
+  sliceCharacter:
+  - now applies initialPermutation first,
+  - then splits into left/right 32-bit halves,
+  - runs feistalEntireRound (which will use the global roundKeys48bit if no keys passed),
+  - then runs inverseInitialPermutation and returns hex.
+*/
   const sliceCharacter = (localMessageBinary) => {
-    if (localMessageBinary.length != 64) return;
-    left32bitsPrimary = localMessageBinary.slice(0, 32);
-    right32bitsPrimary = localMessageBinary.slice(32);
+    if (!localMessageBinary || localMessageBinary.length !== 64) return;
 
-    //// Store right and left result of feistal round
+    // 1) Apply initial permutation (IP)
+    const permuted = initialPermutation(localMessageBinary);
+
+    // 2) Split into left & right (post-IP)
+    left32bitsPrimary = permuted.slice(0, 32);
+    right32bitsPrimary = permuted.slice(32);
+
+    // 3) Run 16 Feistel rounds (uses global roundKeys48bit if none passed)
     const [right, left] = feistalEntireRound(
       left32bitsPrimary,
-      right32bitsPrimary
+      right32bitsPrimary,
+      roundKeys48bit
     );
-    // console.log("left", left32bitsPrimary.length);
-    // console.log("Right", right32bitsPrimary.length);
 
-    /////combine right and left result;
+    // 4) Combine, apply inverse IP, push result
     const combineRightLeft = right + left;
     const finalBlock = inverseInitialPermutation(combineRightLeft);
 
-    // store the post-permutation block
     cipherBlocks.push(finalBlock);
-    // console.log(cipherBlocks);
     cipherText = finalBlock;
-    const hexText = binaryToHex(cipherText);
-    // console.log("Before inverse permutation:", combineRightLeft);
-    // console.log("After inverse permutation:", cipherText);
+
+    const hexText = binaryToHex(finalBlock);
     return hexText;
   };
 
@@ -132,6 +179,7 @@ const AuthProvider = ({ children }) => {
       }
     }
     // console.log(message);
+    return message;
   };
 
   /////////////Key areas //////////////////////
@@ -432,6 +480,27 @@ const AuthProvider = ({ children }) => {
   /////After feistal round inverse initial permutation////
   ///64 bits input to 64 bits output
 
+  // Initial Permutation (DES IP table)
+  const initialPermutation = (block64) => {
+    if (!block64 || block64.length !== 64) {
+      throw new Error(
+        "initialPermutation: input must be a 64-bit binary string"
+      );
+    }
+    const IP = [
+      58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4, 62, 54, 46,
+      38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8, 57, 49, 41, 33, 25, 17,
+      9, 1, 59, 51, 43, 35, 27, 19, 11, 3, 61, 53, 45, 37, 29, 21, 13, 5, 63,
+      55, 47, 39, 31, 23, 15, 7,
+    ];
+
+    let permuted = "";
+    for (let i = 0; i < IP.length; i++) {
+      permuted += block64[IP[i] - 1];
+    }
+    return permuted;
+  };
+
   const inverseInitialPermutation = (localCombineRightLeft) => {
     let localCipherText = "";
     const inverseTable = [
@@ -512,7 +581,7 @@ const AuthProvider = ({ children }) => {
   // Decrypt multiple messages
   const decryptMessages = (messages) => {
     const receiverPrivateKey = localStorage.getItem("key"); // your saved private key
-    console.log("Private key from storage:", receiverPrivateKey);
+    // console.log("Private key from storage:", receiverPrivateKey);
 
     if (!receiverPrivateKey) throw new Error("Private key not found on device");
 
@@ -542,6 +611,36 @@ const AuthProvider = ({ children }) => {
   //////////////////////////////////////////////////////////
 
   ///////////////////////Firebase Process////////////////////////////
+  // const sendMessage = async (
+  //   senderId,
+  //   receiverId,
+  //   cipherTexthex,
+  //   encryptedDESKey
+  // ) => {
+  //   const chatId = [senderId, receiverId].sort().join("_");
+  //   const currentUser = auth.currentUser;
+
+  //   if (!currentUser || currentUser.uid !== senderId) {
+  //     throw new Error("Unauthorized: senderId mismatch");
+  //   }
+
+  //   //Make sure receiverId is valid and exists in Users
+  //   const receiverDoc = await getDoc(doc(db, "Users", receiverId));
+  //   if (!receiverDoc.exists()) {
+  //     throw new Error("Invalid receiverId");
+  //   }
+
+  //   const messageData = {
+  //     senderId,
+  //     receiverId,
+  //     cipherTexthex,
+  //     encryptedDESKey,
+  //     createdAt: serverTimestamp(),
+  //   };
+
+  //   await addDoc(collection(db, "chats", chatId, "messages"), messageData);
+  //   setMessage("");
+  // };
   const sendMessage = async (
     senderId,
     receiverId,
@@ -555,11 +654,15 @@ const AuthProvider = ({ children }) => {
       throw new Error("Unauthorized: senderId mismatch");
     }
 
-    //Make sure receiverId is valid and exists in Users
+    // Make sure receiverId exists
     const receiverDoc = await getDoc(doc(db, "Users", receiverId));
     if (!receiverDoc.exists()) {
       throw new Error("Invalid receiverId");
     }
+    await setDoc(doc(db, "chats", chatId), {
+      participants: [senderId, receiverId],
+      lastMessage: { text: cipherTexthex || "", timestamp: serverTimestamp() },
+    });
 
     const messageData = {
       senderId,
@@ -570,10 +673,12 @@ const AuthProvider = ({ children }) => {
     };
 
     await addDoc(collection(db, "chats", chatId, "messages"), messageData);
+
+    // Reset input message
     setMessage("");
   };
 
-  // console.log("Stored Meesagae", storedMessages);
+  console.log("Stored Meesagae", storedMessages);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
