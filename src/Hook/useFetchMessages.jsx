@@ -2,17 +2,16 @@ import { useEffect, useState } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../../firebase.config";
 
-const useFetchMessages = (receiverId) => {
+const useFetchMessages = (senderId, receiverId) => {
   const [storedMessages, setStoredMessages] = useState([]);
   const [chatId, setChatId] = useState(null);
 
   useEffect(() => {
     const fetchChatIdAndMessages = async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser || !receiverId) return;
+      if (!senderId || !receiverId) return;
 
       // Generate combined chatId
-      const generatedChatId = [currentUser.uid, receiverId].sort().join("_");
+      const generatedChatId = [senderId, receiverId].sort().join("_");
       setChatId(generatedChatId);
 
       // Reference the chat messages collection
@@ -25,10 +24,7 @@ const useFetchMessages = (receiverId) => {
         const msgs = snapshot.docs
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           // Only include messages relevant to this chat
-          .filter(
-            (m) =>
-              m.senderId === currentUser.uid || m.receiverId === currentUser.uid
-          );
+          .filter((m) => m.senderId === senderId || m.receiverId === senderId);
 
         setStoredMessages(msgs);
       });

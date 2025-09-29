@@ -22,8 +22,8 @@ const User = () => {
     // desFunctions,
   } = useContext(AuthContext);
   const { id } = useParams(); // <-- get dynamic portion of a link
-  const { storedMessages, chatId } = useFetchMessages(id);
-
+  const { storedMessages, chatId } = useFetchMessages(user?.uid, id);
+  console.log(user?.uid);
   // useEffect(() => {
   //   if (!user?.uid || !id) return;
 
@@ -66,7 +66,7 @@ const User = () => {
     setMessage("");
   };
 
-  // console.log(storedMessages);
+  console.log(storedMessages);
   return (
     <div>
       <div className="flex items-center bg-gray-300 p-2">
