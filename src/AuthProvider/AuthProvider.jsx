@@ -159,8 +159,9 @@ const AuthProvider = ({ children }) => {
 
     cipherBlocks.push(finalBlock);
     cipherText = finalBlock;
-
+    // console.log("Cipher text Before binary form", cipherText);
     const hexText = binaryToHex(finalBlock);
+    // console.log("Cipher HEX Before", hexText);
     return hexText;
   };
 
@@ -526,10 +527,17 @@ const AuthProvider = ({ children }) => {
   /////Binary string base 64 character string convert
   // const [ciphertextHex, setCipertextHex] = useState("");
   const binaryToHex = (binaryString) => {
-    const cipherHex = parseInt(binaryString, 2).toString(16).toUpperCase();
-    // console.log("Cipher HEX", ciphertextHex);
-    // console.log("56 bit key", key56bit.length);
-    return cipherHex;
+    const cipherHex = BigInt("0b" + binaryString)
+      .toString(16)
+      .toUpperCase();
+    return cipherHex.padStart(16, "0"); // ensure 64-bit = 16 hex chars
+  };
+  // Helper: Convert hex string to binary
+  const hexToBinary = (hexString) => {
+    const cipherBinary = BigInt("0x" + hexString)
+      .toString(2)
+      .padStart(64, "0");
+    return cipherBinary;
   };
 
   const encryptDESKeyForReceiver = async (receiverId) => {
@@ -543,13 +551,6 @@ const AuthProvider = ({ children }) => {
     rsa.setPublicKey(getReceiverPublicKey);
     return rsa.encrypt(key56Hex);
   };
-
-  // Helper: Convert hex string to binary
-  const hexToBinary = (hex) =>
-    hex
-      .match(/.{1,2}/g)
-      .map((byte) => parseInt(byte, 16).toString(2).padStart(8, "0"))
-      .join("");
 
   // Run DES decryption on a single block
   const runDESDecryption = (ciphertextHex, desKey56bit) => {
@@ -580,32 +581,48 @@ const AuthProvider = ({ children }) => {
 
   // Decrypt multiple messages
   const decryptMessages = (messages) => {
-    const receiverPrivateKey = localStorage.getItem("key"); // your saved private key
-    // console.log("Private key from storage:", receiverPrivateKey);
+    console.log("Inside decrypt", messages);
 
-    if (!receiverPrivateKey) throw new Error("Private key not found on device");
+    messages.forEach((msg) => {
+      const {
+        id,
+        senderId,
+        receiverId,
+        cipherTexthex,
+        encryptedDESKey,
+        createdAt,
+      } = msg;
 
-    const rsa = new JSEncrypt();
-    rsa.setPrivateKey(receiverPrivateKey);
-
-    return messages.map((msg) => {
-      try {
-        // 1️⃣ Decrypt DES key first (RSA → hex string)
-        const desKeyHex = rsa.decrypt(msg.encryptedDESKey);
-        if (!desKeyHex) throw new Error("DES key decryption failed");
-
-        // 2️⃣ Convert DES key hex → binary (56-bit key for DES)
-        const desKeyBinary = hexToBinary(desKeyHex);
-
-        // 3️⃣ Decrypt actual message with DES
-        const plaintext = runDESDecryption(msg.cipherTexthex, desKeyBinary);
-
-        return { ...msg, plaintext };
-      } catch (error) {
-        console.error("Decryption failed for message ID:", msg.id, error);
-        return { ...msg, plaintext: "[Cannot decrypt]" };
-      }
+      const ciperTextBinary = hexToBinary(cipherTexthex);
+      console.log(encryptedDESKey);
     });
+
+    // const receiverPrivateKey = localStorage.getItem("key"); // your saved private key
+    // // console.log("Private key from storage:", receiverPrivateKey);
+
+    // if (!receiverPrivateKey) throw new Error("Private key not found on device");
+
+    // const rsa = new JSEncrypt();
+    // rsa.setPrivateKey(receiverPrivateKey);
+
+    // return messages.map((msg) => {
+    //   try {
+    //     // 1️⃣ Decrypt DES key first (RSA → hex string)
+    //     const desKeyHex = rsa.decrypt(msg.encryptedDESKey);
+    //     if (!desKeyHex) throw new Error("DES key decryption failed");
+
+    //     // 2️⃣ Convert DES key hex → binary (56-bit key for DES)
+    //     const desKeyBinary = hexToBinary(desKeyHex);
+
+    //     // 3️⃣ Decrypt actual message with DES
+    //     const plaintext = runDESDecryption(msg.cipherTexthex, desKeyBinary);
+
+    //     return { ...msg, plaintext };
+    //   } catch (error) {
+    //     console.error("Decryption failed for message ID:", msg.id, error);
+    //     return { ...msg, plaintext: "[Cannot decrypt]" };
+    //   }
+    // });
   };
 
   //////////////////////////////////////////////////////////
@@ -678,7 +695,7 @@ const AuthProvider = ({ children }) => {
     setMessage("");
   };
 
-  console.log("Stored Meesagae", storedMessages);
+  // console.log("Stored Meesagae", storedMessages);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {

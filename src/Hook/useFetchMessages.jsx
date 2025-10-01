@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../../firebase.config";
+import { db } from "../../firebase.config";
+import { AuthContext } from "../AuthProvider/AuthContext";
 
 const useFetchMessages = (senderId, receiverId) => {
-  const [storedMessages, setStoredMessages] = useState([]);
+  const { storedMessages, setStoredMessages, decryptMessages } =
+    useContext(AuthContext);
   const [chatId, setChatId] = useState(null);
 
   useEffect(() => {
@@ -25,8 +27,8 @@ const useFetchMessages = (senderId, receiverId) => {
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           // Only include messages relevant to this chat
           .filter((m) => m.senderId === senderId || m.receiverId === senderId);
-
-        setStoredMessages(msgs);
+        const decryptedMsgs = decryptMessages(msgs);
+        setStoredMessages(decryptedMsgs);
       });
 
       return unsubscribe; // unsubscribe when cleanup
