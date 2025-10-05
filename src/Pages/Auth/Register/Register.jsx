@@ -85,7 +85,7 @@ const Register = () => {
       });
 
       ///save the private key on device
-      localStorage.setItem("key", privateKey);
+      localStorage.setItem(`${user.uid}`, privateKey);
 
       toast("User created successfully");
 

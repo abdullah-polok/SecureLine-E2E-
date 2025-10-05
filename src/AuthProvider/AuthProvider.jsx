@@ -226,7 +226,12 @@ const AuthProvider = ({ children }) => {
     // console.log("Key 56 bits " + key56bit.length);
     // console.log(key56bit);
     // Convert 56-bit binary to hex (14 characters)
-    key56Hex = parseInt(key56bit, 2).toString(16).padStart(14, "0");
+
+    key56Hex = BigInt("0b" + key56bit)
+      .toString(16)
+      .padStart(14, "0");
+
+    console.log("Key 56 Hex Before " + key56Hex);
     convert48BitBinaryKey(key56bit);
   };
 
@@ -545,7 +550,7 @@ const AuthProvider = ({ children }) => {
     const receiverDoc = await getDoc(doc(db, "Users", receiverId));
     if (!receiverDoc.exists()) throw new Error("Receiver not found");
     const getReceiverPublicKey = receiverDoc.data().publicKey;
-    console.log("Public key", getReceiverPublicKey);
+    console.log("Reciever Public key", getReceiverPublicKey);
     //Encrypt DES key with receiver’s public key
     const rsa = new JSEncrypt();
     rsa.setPublicKey(getReceiverPublicKey);
@@ -553,30 +558,57 @@ const AuthProvider = ({ children }) => {
   };
 
   // Run DES decryption on a single block
-  const runDESDecryption = (ciphertextHex, desKey56bit) => {
-    // Convert hex → binary 64-bit
-    const ciphertextBinary = hexToBinary(ciphertextHex);
+  // const runDESDecryption = (ciphertextHex, desKey56bit) => {
+  //   // Convert hex → binary 64-bit
+  //   const ciphertextBinary = hexToBinary(ciphertextHex);
 
-    // Split into left/right
-    const left32 = ciphertextBinary.slice(0, 32);
-    const right32 = ciphertextBinary.slice(32);
+  //   // Split into left/right
+  //   const left32 = ciphertextBinary.slice(0, 32);
+  //   const right32 = ciphertextBinary.slice(32);
 
-    // Generate round keys for decryption (reverse order!)
-    convert48BitBinaryKey(desKey56bit);
-    const reversedRoundKeys = [...roundKeys48bit].reverse();
+  //   // Generate round keys for decryption (reverse order!)
+  //   convert48BitBinaryKey(desKey56bit);
+  //   const reversedRoundKeys = [...roundKeys48bit].reverse();
 
-    // Run Feistel with reversed keys
-    const [decryptedRight, decryptedLeft] = feistalEntireRoundWithKeys(
-      left32,
-      right32,
-      reversedRoundKeys
-    );
+  // Run Feistel with reversed keys
+  //   const [decryptedRight, decryptedLeft] = feistalEntireRoundWithKeys(
+  //     left32,
+  //     right32,
+  //     reversedRoundKeys
+  //   );
 
-    const combinedBinary = inverseInitialPermutation(
-      decryptedRight + decryptedLeft
-    );
+  //   const combinedBinary = inverseInitialPermutation(
+  //     decryptedRight + decryptedLeft
+  //   );
 
-    return binaryToText(combinedBinary).replace(/\0+$/, "");
+  //   return binaryToText(combinedBinary).replace(/\0+$/, "");
+  // };
+  const decryptDESKey = async (encryptedDESKey) => {
+    try {
+      // 1. Get receiver's private key from localStorage
+      const receiverPrivateKey = localStorage.getItem("key");
+      if (!receiverPrivateKey) {
+        throw new Error("Private key not found in localStorage");
+      }
+
+      // 2. Create RSA instance
+      const rsa = new JSEncrypt();
+      rsa.setPrivateKey(receiverPrivateKey);
+
+      // 3. Decrypt the DES key
+      const decryptedDESKey = rsa.decrypt(encryptedDESKey);
+
+      if (!decryptedDESKey) {
+        throw new Error("Failed to decrypt DES key");
+      }
+
+      console.log("Decrypted DES key (Hex):", decryptedDESKey);
+
+      return decryptedDESKey; // this should be your DES key in hex (key56Hex)
+    } catch (error) {
+      console.error("Error decrypting DES key:", error);
+      throw error;
+    }
   };
 
   // Decrypt multiple messages
@@ -594,7 +626,7 @@ const AuthProvider = ({ children }) => {
       } = msg;
 
       const ciperTextBinary = hexToBinary(cipherTexthex);
-      console.log(encryptedDESKey);
+      console.log("Checking DES Hex ", decryptDESKey(encryptedDESKey));
     });
 
     // const receiverPrivateKey = localStorage.getItem("key"); // your saved private key
