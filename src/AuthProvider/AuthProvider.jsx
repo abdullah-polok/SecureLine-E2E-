@@ -1,4 +1,4 @@
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import { auth, db } from "../../firebase.config";
 import { AuthContext } from "./AuthContext";
@@ -38,6 +38,12 @@ const AuthProvider = ({ children }) => {
       console.log(err);
     }
   };
+  ////////////////////////////Authentication State Change////////////////////////////
+  const signInUser = (email, password) => {
+    return signInWithEmailAndPassword(auth, email, password);
+  };
+
+  /////////////////////
 
   /////////////////DES Process///////////////////////////////////
 
@@ -713,6 +719,7 @@ const AuthProvider = ({ children }) => {
       lastMessage: { text: cipherTexthex || "", timestamp: serverTimestamp() },
     });
 
+    console.log(senderId, "/n", receiverId);
     const messageData = {
       senderId,
       receiverId,
@@ -726,7 +733,7 @@ const AuthProvider = ({ children }) => {
     // Reset input message
     setMessage("");
   };
-
+  console.log(user?.displayName);
   // console.log("Stored Meesagae", storedMessages);
 
   useEffect(() => {
@@ -756,6 +763,7 @@ const AuthProvider = ({ children }) => {
     setStoredMessages,
     encryptDESKeyForReceiver,
     decryptMessages,
+    signInUser,
     // desFunctions
     // ciphertextHex,
     // setCipertextHex,

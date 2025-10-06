@@ -7,7 +7,7 @@ import { auth } from "../../../../firebase.config";
 import { AuthContext } from "../../../AuthProvider/AuthContext";
 const Login = () => {
   const [showPopup, setShowPopup] = useState(false);
-  const { user } = useContext(AuthContext);
+  const { user, signInUser } = useContext(AuthContext);
   const navigate = useNavigate();
   const handleSignIn = (e) => {
     e.preventDefault();
@@ -15,10 +15,16 @@ const Login = () => {
 
     const email = form.email.value;
     const password = form.password.value;
-    if (user) navigate("/home");
-    else {
-      setShowPopup(true);
-    }
+    console.log(email, password);
+    signInUser(email, password)
+      .then((res) => {
+        console.log(res.user);
+        e.target.reset();
+        navigate("/home");
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
     // console.log(email, password);
     // signInWithEmailAndPassword(auth, email, password);
   };
