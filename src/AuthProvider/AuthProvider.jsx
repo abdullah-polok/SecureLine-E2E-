@@ -24,7 +24,7 @@ const AuthProvider = ({ children }) => {
   const [allusers, setAllUsers] = useState([]);
   const [receiverId, setReceiverId] = useState("");
   const [storedMessages, setStoredMessages] = useState([]);
-
+  const [decryrtedDESKey, setDecryptedDESKey] = useState("");
   ////Get all users
   const getAllUsers = async () => {
     try {
@@ -52,10 +52,6 @@ const AuthProvider = ({ children }) => {
   let roundKeys48bit = [];
   const cipherBlocks = [];
   let cipherText = "";
-
-  //////DES Method manually set up
-  // const ass = char.charCodeAt(0);
-  // let num = ass;
 
   const generalBinaryConvertor = () => {
     console.log("Message is coming", message);
@@ -94,42 +90,6 @@ const AuthProvider = ({ children }) => {
 
     return sliceText;
   };
-
-  // const generalBinaryConvertor = () => {
-  //   console.log("Message is coming", message);
-
-  //   generataRandomInitilKey();
-  //   blocks = []; // store sliceCharacter outputs
-
-  //   for (let i = 0; i < message.length; i += 8) {
-  //     let block = message.slice(i, i + 8);
-
-  //     while (block.length < 8) {
-  //       block += "\0"; // Null character padding
-  //     }
-
-  //     messageBinary = "";
-
-  //     for (let j = 0; j < block.length; j++) {
-  //       let asciiValue = block.charCodeAt(j);
-  //       let bin = "";
-  //       while (asciiValue > 0) {
-  //         bin = (asciiValue % 2) + bin;
-  //         asciiValue = Math.floor(asciiValue / 2);
-  //       }
-
-  //       bin = bin.padStart(8, "0");
-  //       messageBinary += bin;
-  //     }
-
-  //     blocks.push(messageBinary);
-
-  //     // process this block immediately
-  //     sliceCharacter(messageBinary);
-  //   }
-
-  //   return blocks; // return all block results
-  // };
 
   let left32bitsPrimary = "";
   let right32bitsPrimary = "";
@@ -589,10 +549,12 @@ const AuthProvider = ({ children }) => {
 
   //   return binaryToText(combinedBinary).replace(/\0+$/, "");
   // };
-  const decryptDESKey = async (encryptedDESKey) => {
+  const decryptDESKey = (encryptedDESKey) => {
     try {
       // 1. Get receiver's private key from localStorage
-      const receiverPrivateKey = localStorage.getItem("key");
+      const receiverPrivateKey = localStorage.getItem(
+        "W8Dczpa9VOgd4URk1uhOPyiCjVZ2"
+      );
       if (!receiverPrivateKey) {
         throw new Error("Private key not found in localStorage");
       }
@@ -608,9 +570,10 @@ const AuthProvider = ({ children }) => {
         throw new Error("Failed to decrypt DES key");
       }
 
-      console.log("Decrypted DES key (Hex):", decryptedDESKey);
+      const desBinary = hexToBinary(decryptedDESKey);
+      // setDecryptedDESKey(desBinary);
 
-      return decryptedDESKey; // this should be your DES key in hex (key56Hex)
+      return desBinary; // this should be your DES key in hex (key56Hex)
     } catch (error) {
       console.error("Error decrypting DES key:", error);
       throw error;
@@ -619,7 +582,7 @@ const AuthProvider = ({ children }) => {
 
   // Decrypt multiple messages
   const decryptMessages = (messages) => {
-    console.log("Inside decrypt", messages);
+    // console.log("Inside decrypt", messages);
 
     messages.forEach((msg) => {
       const {
@@ -632,35 +595,67 @@ const AuthProvider = ({ children }) => {
       } = msg;
 
       const ciperTextBinary = hexToBinary(cipherTexthex);
-      console.log("Checking DES Hex ", decryptDESKey(encryptedDESKey));
+
+      ////
+      const originalDESKey = decryptDESKey(encryptedDESKey);
+
+      console.log("Binary text", ciperTextBinary.length);
+      console.log("Binary key ", originalDESKey.length);
+      // 3️⃣ Decrypt the message using your DES function
+      const plainText = runDESDecryption(cipherTexthex, originalDESKey);
+
+      console.log(plainText);
     });
+  };
 
-    // const receiverPrivateKey = localStorage.getItem("key"); // your saved private key
-    // // console.log("Private key from storage:", receiverPrivateKey);
+  // Run DES Decryption on a ciphertext (in hex) using the 56-bit binary DES key
+  const runDESDecryption = (ciphertextHex, desKey56bit) => {
+    try {
+      // 1️⃣ Convert ciphertext hex → 64-bit binary
+      const ciphertextBinary = hexToBinary(ciphertextHex);
 
-    // if (!receiverPrivateKey) throw new Error("Private key not found on device");
+      // 2️⃣ Apply Initial Permutation (same as encryption start)
+      const permuted = initialPermutation(ciphertextBinary);
 
-    // const rsa = new JSEncrypt();
-    // rsa.setPrivateKey(receiverPrivateKey);
+      // 3️⃣ Split into left/right halves
+      let left32 = permuted.slice(0, 32);
+      let right32 = permuted.slice(32);
 
-    // return messages.map((msg) => {
-    //   try {
-    //     // 1️⃣ Decrypt DES key first (RSA → hex string)
-    //     const desKeyHex = rsa.decrypt(msg.encryptedDESKey);
-    //     if (!desKeyHex) throw new Error("DES key decryption failed");
+      // 4️⃣ Generate round keys from the provided 56-bit key
+      convert48BitBinaryKey(desKey56bit);
 
-    //     // 2️⃣ Convert DES key hex → binary (56-bit key for DES)
-    //     const desKeyBinary = hexToBinary(desKeyHex);
+      // 5️⃣ Reverse the round keys for decryption
+      const reversedKeys = [...roundKeys48bit].reverse();
 
-    //     // 3️⃣ Decrypt actual message with DES
-    //     const plaintext = runDESDecryption(msg.cipherTexthex, desKeyBinary);
+      // 6️⃣ Run 16 Feistel rounds with reversed keys
+      const [right, left] = feistalEntireRoundWithKeys(
+        left32,
+        right32,
+        reversedKeys
+      );
 
-    //     return { ...msg, plaintext };
-    //   } catch (error) {
-    //     console.error("Decryption failed for message ID:", msg.id, error);
-    //     return { ...msg, plaintext: "[Cannot decrypt]" };
-    //   }
-    // });
+      // 7️⃣ Combine (swap order before final permutation)
+      const combined = right + left;
+
+      // 8️⃣ Apply Inverse Initial Permutation (final DES step)
+      const decryptedBinary = inverseInitialPermutation(combined);
+
+      // 9️⃣ Convert binary → text
+      let decryptedText = "";
+      for (let i = 0; i < decryptedBinary.length; i += 8) {
+        const byte = decryptedBinary.slice(i, i + 8);
+        const charCode = parseInt(byte, 2);
+        decryptedText += String.fromCharCode(charCode);
+      }
+
+      // 🔟 Remove padding (null characters)
+      decryptedText = decryptedText.replace(/\0+$/, "");
+
+      return decryptedText;
+    } catch (error) {
+      console.error("Error in runDESDecryption:", error);
+      return null;
+    }
   };
 
   //////////////////////////////////////////////////////////
@@ -733,8 +728,9 @@ const AuthProvider = ({ children }) => {
     // Reset input message
     setMessage("");
   };
-  console.log(user?.displayName);
-  // console.log("Stored Meesagae", storedMessages);
+  // console.log(localStorage.getItem("W8Dczpa9VOgd4URk1uhOPyiCjVZ2"));
+  // console.log(user?.displayName);
+  console.log(decryrtedDESKey);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -764,9 +760,6 @@ const AuthProvider = ({ children }) => {
     encryptDESKeyForReceiver,
     decryptMessages,
     signInUser,
-    // desFunctions
-    // ciphertextHex,
-    // setCipertextHex,
   };
   return (
     <AuthContext.Provider value={userInfo}>{children}</AuthContext.Provider>

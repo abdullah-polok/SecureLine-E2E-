@@ -15,15 +15,15 @@ const Login = () => {
 
     const email = form.email.value;
     const password = form.password.value;
-    console.log(email, password);
+    // console.log(email, password);
     signInUser(email, password)
       .then((res) => {
-        console.log(res.user);
+        // console.log(res.user);
         e.target.reset();
         navigate("/home");
       })
       .catch((err) => {
-        console.log(err.message);
+        // console.log(err.message);
       });
     // console.log(email, password);
     // signInWithEmailAndPassword(auth, email, password);

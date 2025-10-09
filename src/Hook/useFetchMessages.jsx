@@ -27,7 +27,7 @@ const useFetchMessages = (senderId, receiverId) => {
           .map((doc) => ({ id: doc.id, ...doc.data() }))
           // Only include messages relevant to this chat
           .filter((m) => m.senderId === senderId || m.receiverId === senderId);
-        const decryptedMsgs = decryptMessages(msgs);
+        const decryptedMsgs = decryptMessages(msgs, receiverId);
         setStoredMessages(decryptedMsgs);
       });
 
